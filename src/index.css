@@ -1,0 +1,81 @@
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=DM+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; }
+  html { scroll-behavior: smooth; font-size: 16px; }
+  body {
+    font-family: 'DM Sans', 'Inter', system-ui, sans-serif;
+    @apply bg-white text-black antialiased;
+    font-feature-settings: "ss01", "cv02";
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'DM Sans', system-ui, sans-serif;
+    @apply font-bold tracking-tight;
+  }
+  /* Display headlines use Anton */
+  .font-display { font-family: 'Anton', 'Bebas Neue', 'Impact', sans-serif; }
+  input, select, textarea, button { font-family: inherit; }
+  a { color: inherit; text-decoration: none; }
+  img { display: block; max-width: 100%; }
+}
+
+@layer components {
+  /* ── Buttons ── */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2
+           text-xs font-semibold tracking-[0.1em] uppercase
+           transition-all duration-150 cursor-pointer select-none
+           border px-6 py-3;
+  }
+  .btn-black {
+    @apply btn bg-black text-white border-black
+           hover:bg-gray-800 active:scale-[0.98];
+  }
+  .btn-outline {
+    @apply btn bg-white text-black border-black
+           hover:bg-black hover:text-white active:scale-[0.98];
+  }
+  .btn-sm {
+    @apply text-2xs px-4 py-2;
+  }
+
+  /* ── Inputs ── */
+  .field {
+    @apply w-full px-4 py-3 text-sm border border-gray-200 bg-white
+           placeholder-gray-400 focus:outline-none focus:border-black
+           transition-colors duration-150;
+  }
+
+  /* ── Product image container ── */
+  .product-img {
+    @apply overflow-hidden bg-gray-50 aspect-[3/4] w-full;
+  }
+
+  /* ── Section label (small uppercase) ── */
+  .eyebrow {
+    @apply text-2xs font-semibold tracking-[0.2em] uppercase text-gray-500;
+  }
+
+  /* ── Divider ── */
+  .rule { @apply border-t border-gray-200; }
+}
+
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+  .text-balance { text-wrap: balance; }
+
+  /* Brutalist headline helper */
+  .headline {
+    font-family: 'Anton', 'Impact', sans-serif;
+    @apply uppercase leading-none tracking-tight;
+  }
+}
