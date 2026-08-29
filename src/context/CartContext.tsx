@@ -1,14 +1,15 @@
 import { createContext, useContext, useState, ReactNode } from 'react'
-import { Product, CartItem } from '@/types'
+import { ProductSummary } from '@/lib/api'
+import { CartItem } from '@/types'
 
 interface CartContextType {
   items: CartItem[]
   isOpen: boolean
   itemCount: number
   subtotal: number
-  addItem: (product: Product, color: string, size: string, qty?: number) => void
-  removeItem: (id: number, color: string, size: string) => void
-  updateQty: (id: number, color: string, size: string, qty: number) => void
+  addItem: (product: ProductSummary, variantId: string, color: string, size: string, qty?: number) => void
+  removeItem: (id: string, variantId: string) => void
+  updateQty: (id: string, variantId: string, qty: number) => void
   clearCart: () => void
   toggleCart: () => void
   openCart: () => void
@@ -21,32 +22,25 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([])
   const [isOpen, setIsOpen] = useState(false)
 
-  const addItem = (product: Product, color: string, size: string, qty = 1) => {
+  const addItem = (product: ProductSummary, variantId: string, color: string, size: string, qty = 1) => {
     setItems(prev => {
-      const existing = prev.find(i => i.product.id === product.id && i.color === color && i.size === size)
+      const existing = prev.find(i => i.variantId === variantId)
       if (existing) {
-        return prev.map(i =>
-          i.product.id === product.id && i.color === color && i.size === size
-            ? { ...i, qty: i.qty + qty }
-            : i
-        )
+        return prev.map(i => i.variantId === variantId ? { ...i, qty: i.qty + qty } : i)
       }
-      return [...prev, { product, color, size, qty }]
+      return [...prev, { product, variantId, color, size, qty }]
     })
   }
 
-  const removeItem = (id: number, color: string, size: string) => {
-    setItems(prev => prev.filter(i => !(i.product.id === id && i.color === color && i.size === size)))
+  const removeItem = (id: string, variantId: string) => {
+    setItems(prev => prev.filter(i => !(i.product.id === id && i.variantId === variantId)))
   }
 
-  const updateQty = (id: number, color: string, size: string, qty: number) => {
-    if (qty <= 0) {
-      removeItem(id, color, size)
-      return
-    }
+  const updateQty = (id: string, variantId: string, qty: number) => {
+    if (qty <= 0) { removeItem(id, variantId); return }
     setItems(prev =>
       prev.map(i =>
-        i.product.id === id && i.color === color && i.size === size ? { ...i, qty } : i
+        i.product.id === id && i.variantId === variantId ? { ...i, qty } : i
       )
     )
   }

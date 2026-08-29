@@ -1,3 +1,6 @@
+import { ProductSummary } from '@/lib/api'
+
+// Legacy mock type kept for data/products.ts compatibility
 export interface Product {
   id: number
   name: string
@@ -14,8 +17,10 @@ export interface Product {
   description: string
 }
 
+// Cart item uses API's ProductSummary so ProductDetailPage and ShopPage can add items directly
 export interface CartItem {
-  product: Product
+  product: ProductSummary
+  variantId: string
   color: string
   size: string
   qty: number

@@ -43,40 +43,53 @@ export default function CartSidebar() {
               </button>
             </div>
           ) : (
-            items.map(item => (
-              <div key={`${item.product.id}-${item.color}-${item.size}`} className="flex gap-4">
-                <Link to={`/product/${item.product.id}`} onClick={closeCart} className="shrink-0 w-[80px] h-[100px] bg-gray-50 overflow-hidden">
-                  <img src={item.product.image} alt={item.product.name} className="w-full h-full object-cover" />
-                </Link>
-                <div className="flex-1 flex flex-col justify-between">
-                  <div>
-                    <Link to={`/product/${item.product.id}`} onClick={closeCart} className="text-sm font-medium leading-snug hover:opacity-60 transition-opacity">
-                      {item.product.name}
-                    </Link>
-                    <div className="flex gap-2 mt-1 text-xs text-gray-500">
-                      {item.size && <span>Size: {item.size}</span>}
+            items.map(item => {
+              const imageUrl = item.product.mainImageUrl ?? 'https://placehold.co/80x100?text=—'
+              return (
+                <div key={`${item.product.id}-${item.variantId}`} className="flex gap-4">
+                  <Link to={`/product/${item.product.id}`} onClick={closeCart} className="shrink-0 w-[80px] h-[100px] bg-gray-50 overflow-hidden">
+                    <img src={imageUrl} alt={item.product.name} className="w-full h-full object-cover" />
+                  </Link>
+                  <div className="flex-1 flex flex-col justify-between">
+                    <div>
+                      <Link to={`/product/${item.product.id}`} onClick={closeCart} className="text-sm font-medium leading-snug hover:opacity-60 transition-opacity">
+                        {item.product.name}
+                      </Link>
+                      <div className="flex gap-2 mt-1 text-xs text-gray-500">
+                        {item.size && <span>Size: {item.size}</span>}
+                        {item.color && <span>{item.color}</span>}
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center border border-gray-200">
-                      <button onClick={() => updateQty(item.product.id, item.color, item.size, item.qty - 1)} className="w-7 h-7 flex items-center justify-center hover:bg-gray-50 transition-colors">
-                        <Minus size={11} />
-                      </button>
-                      <span className="w-8 text-center text-xs font-medium">{item.qty}</span>
-                      <button onClick={() => updateQty(item.product.id, item.color, item.size, item.qty + 1)} className="w-7 h-7 flex items-center justify-center hover:bg-gray-50 transition-colors">
-                        <Plus size={11} />
-                      </button>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold">$ {(item.product.price * item.qty).toFixed(0)}</span>
-                      <button onClick={() => removeItem(item.product.id, item.color, item.size)} className="text-gray-300 hover:text-black transition-colors">
-                        <Trash2 size={13} />
-                      </button>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center border border-gray-200">
+                        <button
+                          onClick={() => updateQty(item.product.id, item.variantId, item.qty - 1)}
+                          className="w-7 h-7 flex items-center justify-center hover:bg-gray-50 transition-colors"
+                        >
+                          <Minus size={11} />
+                        </button>
+                        <span className="w-8 text-center text-xs font-medium">{item.qty}</span>
+                        <button
+                          onClick={() => updateQty(item.product.id, item.variantId, item.qty + 1)}
+                          className="w-7 h-7 flex items-center justify-center hover:bg-gray-50 transition-colors"
+                        >
+                          <Plus size={11} />
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold">$ {(item.product.price * item.qty).toFixed(2)}</span>
+                        <button
+                          onClick={() => removeItem(item.product.id, item.variantId)}
+                          className="text-gray-300 hover:text-black transition-colors"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))
+              )
+            })
           )}
         </div>
 
@@ -85,7 +98,7 @@ export default function CartSidebar() {
           <div className="border-t border-gray-100 px-6 py-5 space-y-4">
             <div className="flex justify-between text-sm">
               <span className="text-gray-500">Subtotal</span>
-              <span className="font-semibold">$ {subtotal.toFixed(0)}</span>
+              <span className="font-semibold">$ {subtotal.toFixed(2)}</span>
             </div>
             <p className="text-xs text-gray-400">Shipping &amp; taxes calculated at checkout</p>
             <Link to="/checkout" onClick={closeCart} className="btn-black w-full justify-between">

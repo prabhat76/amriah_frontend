@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
-import { useSearchParams, Link } from 'react-router-dom'
+import { useState, useEffect, useCallback } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { ChevronDown, ChevronUp, Loader2 } from 'lucide-react'
 import { productsApi, categoriesApi, ProductSummary, CategoryResponse } from '@/lib/api'
 import ProductCard from '@/components/ProductCard'

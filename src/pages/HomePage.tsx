@@ -1,11 +1,29 @@
 import { Link } from 'react-router-dom'
-import { ArrowRight } from 'lucide-react'
-import { products } from '@/data/products'
+import { ArrowRight, Loader2 } from 'lucide-react'
+import { productsApi, ProductSummary } from '@/lib/api'
+import { useApi } from '@/hooks/useApi'
 import ProductCard from '@/components/ProductCard'
 
+function ProductRow({ products }: { products: ProductSummary[] }) {
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-5">
+      {products.map(p => <ProductCard key={p.id} product={p} />)}
+    </div>
+  )
+}
+
 export default function HomePage() {
-  const newThisWeek = products.slice(0, 4)
-  const collections = products.slice(0, 3)
+  const { data: newArrivals, loading: loadingNew } = useApi(
+    () => productsApi.list(0, 4),
+    []
+  )
+  const { data: collections, loading: loadingCol } = useApi(
+    () => productsApi.list(0, 3),
+    []
+  )
+
+  const newProducts = newArrivals?.content ?? []
+  const collectionProducts = collections?.content ?? []
 
   return (
     <main className="bg-white">
@@ -41,7 +59,6 @@ export default function HomePage() {
 
             {/* Right: product duo */}
             <div className="relative order-1 lg:order-2 h-[55vw] lg:h-full max-h-[640px] flex items-end justify-center gap-4 pb-0 overflow-hidden">
-              {/* Tall image */}
               <div className="w-[45%] h-[90%] bg-gray-100 overflow-hidden self-end">
                 <img
                   src="https://images.unsplash.com/photo-1617196034183-421b4040ed20?w=600&q=85"
@@ -49,7 +66,6 @@ export default function HomePage() {
                   className="w-full h-full object-cover object-top"
                 />
               </div>
-              {/* Short image */}
               <div className="w-[42%] h-[72%] bg-gray-100 overflow-hidden self-end">
                 <img
                   src="https://images.unsplash.com/photo-1552902865-b72c031ac5ea?w=600&q=85"
@@ -65,34 +81,29 @@ export default function HomePage() {
       {/* ══ NEW THIS WEEK ══ */}
       <section className="py-14 border-b border-gray-200">
         <div className="max-w-content mx-auto px-6 lg:px-10">
-
-          {/* Section header */}
           <div className="flex items-end justify-between mb-8">
             <div className="flex items-end gap-4">
-              <h2 className="headline text-4xl sm:text-5xl text-black">
-                NEW THIS WEEK
-              </h2>
-              <span className="text-sm text-gray-400 mb-1">({newThisWeek.length})</span>
+              <h2 className="headline text-4xl sm:text-5xl text-black">NEW THIS WEEK</h2>
+              <span className="text-sm text-gray-400 mb-1">({newProducts.length})</span>
             </div>
             <Link to="/shop" className="text-xs font-semibold uppercase tracking-widest hover:opacity-60 transition-opacity flex items-center gap-1">
               See All <ArrowRight size={12} />
             </Link>
           </div>
 
-          {/* Products row */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-5">
-            {newThisWeek.map(p => (
-              <ProductCard key={p.id} product={p} />
-            ))}
-          </div>
+          {loadingNew ? (
+            <div className="flex justify-center py-12">
+              <Loader2 size={24} className="animate-spin text-gray-300" />
+            </div>
+          ) : (
+            <ProductRow products={newProducts} />
+          )}
         </div>
       </section>
 
       {/* ══ XIV COLLECTIONS 23–24 ══ */}
       <section className="py-14 border-b border-gray-200">
         <div className="max-w-content mx-auto px-6 lg:px-10">
-
-          {/* Section header with filter bar */}
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
             <h2 className="headline text-4xl sm:text-5xl text-black">
               XIV COLLECTIONS<br className="sm:hidden" />
@@ -111,34 +122,40 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* 3-col grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-            {collections.map(p => (
-              <div key={p.id} className="group">
-                <Link to={`/product/${p.id}`} className="block">
-                  <div className="product-img aspect-[3/4]">
-                    <img
-                      src={p.image}
-                      alt={p.name}
-                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
-                    />
+          {loadingCol ? (
+            <div className="flex justify-center py-12">
+              <Loader2 size={24} className="animate-spin text-gray-300" />
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              {collectionProducts.map(p => {
+                const img = p.mainImageUrl ?? 'https://placehold.co/400x533?text=No+Image'
+                return (
+                  <div key={p.id} className="group">
+                    <Link to={`/product/${p.id}`} className="block">
+                      <div className="product-img aspect-[3/4]">
+                        <img
+                          src={img}
+                          alt={p.name}
+                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
+                        />
+                      </div>
+                      <div className="mt-3 flex items-start justify-between gap-2">
+                        <div>
+                          <p className="eyebrow">{p.categoryName}</p>
+                          <h3 className="text-sm font-medium text-black mt-0.5 leading-snug">{p.name}</h3>
+                        </div>
+                        <p className="text-sm font-semibold text-black shrink-0">$ {p.price.toFixed(2)}</p>
+                      </div>
+                    </Link>
                   </div>
-                  <div className="mt-3 flex items-start justify-between gap-2">
-                    <div>
-                      <p className="eyebrow">{p.category}</p>
-                      <h3 className="text-sm font-medium text-black mt-0.5 leading-snug">{p.name}</h3>
-                    </div>
-                    <p className="text-sm font-semibold text-black shrink-0">$ {p.price}</p>
-                  </div>
-                </Link>
-              </div>
-            ))}
-          </div>
+                )
+              })}
+            </div>
+          )}
 
           <div className="mt-10 text-center">
-            <Link to="/shop" className="btn-outline">
-              View All Products
-            </Link>
+            <Link to="/shop" className="btn-outline">View All Products</Link>
           </div>
         </div>
       </section>
@@ -157,7 +174,6 @@ export default function HomePage() {
             </p>
           </div>
 
-          {/* Photo collage */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
               'https://images.unsplash.com/photo-1552902865-b72c031ac5ea?w=500&q=80',
@@ -179,9 +195,7 @@ export default function HomePage() {
       {/* ══ BRAND FOOTER MARK ══ */}
       <section className="py-20">
         <div className="max-w-content mx-auto px-6 lg:px-10 text-center">
-          <p
-            className="headline text-[6rem] sm:text-[9rem] lg:text-[12rem] leading-none text-black opacity-[0.06] select-none"
-          >
+          <p className="headline text-[6rem] sm:text-[9rem] lg:text-[12rem] leading-none text-black opacity-[0.06] select-none">
             XIV QR
           </p>
           <div className="-mt-8 relative z-10">

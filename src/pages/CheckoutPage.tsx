@@ -226,9 +226,9 @@ export default function CheckoutPage() {
 
             <div className="space-y-4 max-h-56 overflow-y-auto">
               {items.map(item => (
-                <div key={`${item.product.id}-${item.color}-${item.size}`} className="flex items-center gap-3">
+                <div key={`${item.product.id}-${item.variantId}`} className="flex items-center gap-3">
                   <div className="relative w-14 h-[70px] bg-gray-50 overflow-hidden shrink-0">
-                    <img src={item.product.image} alt={item.product.name} className="w-full h-full object-cover" />
+                    <img src={item.product.mainImageUrl ?? 'https://placehold.co/56x70?text=—'} alt={item.product.name} className="w-full h-full object-cover" />
                     <span className="absolute -top-1 -right-1 bg-black text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
                       {item.qty}
                     </span>
