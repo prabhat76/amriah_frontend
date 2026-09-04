@@ -1,90 +1,86 @@
-import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Star } from 'lucide-react'
-import { ProductSummary } from '@/lib/api'
-import { useCart } from '@/context/CartContext'
+import { Heart, Star, Sparkles } from 'lucide-react'
+import type { ProductSummary } from '@/lib/api'
 
 interface Props {
   product: ProductSummary
-  showAdd?: boolean
 }
 
-export default function ProductCard({ product, showAdd = false }: Props) {
-  const { addItem } = useCart()
-  const [added, setAdded] = useState(false)
-  const [hovered, setHovered] = useState(false)
+const PLACEHOLDER = 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=600&q=80'
 
-  const handleAdd = (e: React.MouseEvent) => {
-    e.preventDefault()
-    // Add with empty variantId/color/size — user can select on detail page
-    // Quick-add picks the first available variant by convention
-    addItem(product, `${product.id}-default`, '', '', 1)
-    setAdded(true)
-    setTimeout(() => setAdded(false), 1600)
-  }
-
-  const hasDiscount = product.compareAtPrice && product.compareAtPrice > product.price
-  const imageUrl = product.mainImageUrl ?? 'https://placehold.co/400x500?text=No+Image'
+export default function ProductCard({ product: p }: Props) {
+  const image = p.mainImageUrl ?? PLACEHOLDER
+  const hasDiscount = p.compareAtPrice != null && p.compareAtPrice > p.price
+  const discountPct = hasDiscount
+    ? Math.round((1 - p.price / p.compareAtPrice!) * 100)
+    : 0
 
   return (
-    <Link
-      to={`/product/${product.id}`}
-      className="group block"
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-    >
+    <Link to={`/product/${p.id}`} className="card-product block">
       {/* Image */}
-      <div className="product-img relative bg-gray-50">
+      <div className="relative aspect-[3/4] overflow-hidden bg-cream">
         <img
-          src={imageUrl}
-          alt={product.name}
-          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
+          src={image}
+          alt={p.name}
+          className="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-105"
           loading="lazy"
+          onError={e => { (e.target as HTMLImageElement).src = PLACEHOLDER }}
         />
 
-        {/* Hover overlay — quick add */}
-        {(showAdd || hovered) && (
-          <button
-            onClick={handleAdd}
-            className={`absolute bottom-0 left-0 right-0 py-3 text-xs font-semibold tracking-[0.1em] uppercase
-              transition-all duration-200 translate-y-full group-hover:translate-y-0
-              ${added ? 'bg-gray-800 text-white' : 'bg-black text-white hover:bg-gray-800'}`}
-          >
-            {added ? 'Added ✓' : 'Quick Add'}
-          </button>
-        )}
+        {/* Badges top-left */}
+        <div className="absolute top-3 left-3 flex flex-col gap-1.5">
+          {p.newArrival && <span className="badge-navy">New</span>}
+          {p.featured && <span className="badge-gold">Featured</span>}
+          {hasDiscount && <span className="badge-custom">−{discountPct}%</span>}
+        </div>
 
-        {/* Badges */}
-        {product.newArrival && (
-          <span className="absolute top-3 left-3 bg-black text-white text-[10px] font-semibold tracking-widest uppercase px-2 py-1">
-            New
+        {/* Product type badge top-right */}
+        <div className="absolute top-3 right-3">
+          <span className="badge-cream flex items-center gap-1">
+            <Sparkles size={8} />
+            Customisable
           </span>
-        )}
-        {hasDiscount && !product.newArrival && (
-          <span className="absolute top-3 left-3 bg-black text-white text-[10px] font-semibold tracking-widest uppercase px-2 py-1">
-            Sale
-          </span>
-        )}
+        </div>
+
+        {/* Hover wishlist */}
+        <button
+          onClick={e => { e.preventDefault(); /* wishlist */ }}
+          className="absolute bottom-3 right-3 w-8 h-8 bg-pearl/80 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:bg-pearl"
+          aria-label="Save to wishlist"
+        >
+          <Heart size={14} className="text-navy" />
+        </button>
+
+        {/* Bottom gradient on hover */}
+        <div className="absolute inset-x-0 bottom-0 h-20 overlay-gradient opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
       </div>
 
       {/* Info */}
-      <div className="mt-3 space-y-0.5">
-        <p className="text-xs text-gray-400 uppercase tracking-wider">{product.categoryName}</p>
-        <h3 className="text-sm font-medium text-black leading-snug group-hover:opacity-70 transition-opacity line-clamp-2">
-          {product.name}
+      <div className="pt-3 pb-1">
+        {p.brandName && (
+          <p className="eyebrow text-[9px] mb-1">{p.brandName}</p>
+        )}
+        <h3 className="font-body text-sm font-medium text-navy leading-snug line-clamp-2 group-hover:text-gold transition-colors duration-200">
+          {p.name}
         </h3>
-        <div className="flex items-center justify-between pt-0.5">
-          <div className="flex items-center gap-2">
-            {hasDiscount && (
-              <span className="text-xs text-gray-400 line-through">$ {product.compareAtPrice!.toFixed(2)}</span>
-            )}
-            <span className="text-sm font-semibold text-black">$ {product.price.toFixed(2)}</span>
+
+        {/* Rating */}
+        {p.reviewCount > 0 && (
+          <div className="flex items-center gap-1 mt-1">
+            <Star size={9} className="fill-gold text-gold" />
+            <span className="text-[10px] text-stone">{p.averageRating.toFixed(1)} ({p.reviewCount})</span>
           </div>
-          {product.reviewCount > 0 && (
-            <div className="flex items-center gap-0.5 text-[10px] text-gray-400">
-              <Star size={10} className="fill-yellow-400 text-yellow-400" />
-              <span>{product.averageRating.toFixed(1)}</span>
-            </div>
+        )}
+
+        {/* Price */}
+        <div className="flex items-center gap-2 mt-2">
+          <span className="text-sm font-medium text-navy">
+            ${p.price.toFixed(2)}
+          </span>
+          {hasDiscount && (
+            <span className="text-xs text-stone line-through">
+              ${p.compareAtPrice!.toFixed(2)}
+            </span>
           )}
         </div>
       </div>

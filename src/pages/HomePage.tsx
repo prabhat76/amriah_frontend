@@ -1,211 +1,423 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight, Loader2 } from 'lucide-react'
-import { productsApi, ProductSummary } from '@/lib/api'
-import { useApi } from '@/hooks/useApi'
+import { ArrowRight, Sparkles, ChevronRight, ChevronLeft } from 'lucide-react'
+import { productsApi, bannerApi, ProductSummary, BannerResponse } from '@/lib/api'
 import ProductCard from '@/components/ProductCard'
 
-function ProductRow({ products }: { products: ProductSummary[] }) {
-  return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-5">
-      {products.map(p => <ProductCard key={p.id} product={p} />)}
-    </div>
-  )
-}
+const HERO_IMAGE = 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1200&q=85'
+const TEXTILE_IMAGE = 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=800&q=80'
+const SARI_IMAGE = 'https://images.unsplash.com/photo-1585487000160-6ebcfceb0d03?w=800&q=80'
 
 export default function HomePage() {
-  const { data: newArrivals, loading: loadingNew } = useApi(
-    () => productsApi.list(0, 4),
-    []
-  )
-  const { data: collections, loading: loadingCol } = useApi(
-    () => productsApi.list(0, 3),
-    []
-  )
+  const [featured, setFeatured] = useState<ProductSummary[]>([])
+  const [loadingFeatured, setLoadingFeatured] = useState(true)
+  const [banners, setBanners] = useState<BannerResponse[]>([])
+  const [bannerIdx, setBannerIdx] = useState(0)
 
-  const newProducts = newArrivals?.content ?? []
-  const collectionProducts = collections?.content ?? []
+  useEffect(() => {
+    productsApi.featured(0, 8)
+      .then(res => setFeatured(res.content))
+      .catch(() => {})
+      .finally(() => setLoadingFeatured(false))
+    bannerApi.list()
+      .then(setBanners)
+      .catch(() => {})
+  }, [])
+
+  // Auto-advance banner carousel
+  useEffect(() => {
+    if (banners.length < 2) return
+    const t = setInterval(() => setBannerIdx(i => (i + 1) % banners.length), 5000)
+    return () => clearInterval(t)
+  }, [banners.length])
+
+  const activeBanner = banners[bannerIdx]
 
   return (
-    <main className="bg-white">
+    <main className="bg-pearl">
 
-      {/* ══ HERO ══ */}
-      <section className="border-b border-gray-200">
-        <div className="max-w-content mx-auto px-6 lg:px-10">
-          <div className="grid lg:grid-cols-[1fr_1fr] min-h-[82vh] items-center gap-0">
+      {/* ═══════════════════════════════════════════════════════
+          HERO — API Banner carousel (or static fallback)
+      ═══════════════════════════════════════════════════════ */}
+      {activeBanner ? (
+        <section className="relative min-h-[80vh] sm:min-h-screen overflow-hidden">
+          {/* Background image */}
+          <img
+            src={activeBanner.imageUrl}
+            alt={activeBanner.title ?? 'Banner'}
+            className="absolute inset-0 w-full h-full object-cover object-center transition-opacity duration-700"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-navy/80 via-navy/40 to-transparent" />
 
-            {/* Left: text */}
-            <div className="py-16 lg:py-24 order-2 lg:order-1">
-              <p className="eyebrow mb-4">New Collection · Summer 2024</p>
-
-              <h1
-                className="headline text-[5rem] sm:text-[7rem] lg:text-[8rem] xl:text-[9rem] leading-[0.9] text-black mb-2"
-              >
-                NEW<br />
-                COLLEC<br />
-                TION
+          {/* Content */}
+          <div className="relative z-10 flex flex-col justify-center px-8 sm:px-16 lg:px-24 py-24 min-h-[80vh]">
+            {activeBanner.title && (
+              <h1 className="font-display text-pearl leading-[0.9] mb-4 animate-fade-up"
+                  style={{ fontSize: 'clamp(2.8rem, 7vw, 6rem)' }}>
+                {activeBanner.title}
               </h1>
-
-              <p className="text-sm text-gray-500 mt-6 max-w-xs leading-relaxed">
-                An elegant vogue — we blend creativity with craftsmanship to create fashion
-                that transcends trends and stands the test of time.
-              </p>
-
-              <div className="mt-8">
-                <Link to="/shop" className="btn-black">
-                  Go To Shop <ArrowRight size={14} />
-                </Link>
-              </div>
-            </div>
-
-            {/* Right: product duo */}
-            <div className="relative order-1 lg:order-2 h-[55vw] lg:h-full max-h-[640px] flex items-end justify-center gap-4 pb-0 overflow-hidden">
-              <div className="w-[45%] h-[90%] bg-gray-100 overflow-hidden self-end">
-                <img
-                  src="https://images.unsplash.com/photo-1617196034183-421b4040ed20?w=600&q=85"
-                  alt="New Collection"
-                  className="w-full h-full object-cover object-top"
-                />
-              </div>
-              <div className="w-[42%] h-[72%] bg-gray-100 overflow-hidden self-end">
-                <img
-                  src="https://images.unsplash.com/photo-1552902865-b72c031ac5ea?w=600&q=85"
-                  alt="New Collection 2"
-                  className="w-full h-full object-cover object-top"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ══ NEW THIS WEEK ══ */}
-      <section className="py-14 border-b border-gray-200">
-        <div className="max-w-content mx-auto px-6 lg:px-10">
-          <div className="flex items-end justify-between mb-8">
-            <div className="flex items-end gap-4">
-              <h2 className="headline text-4xl sm:text-5xl text-black">NEW THIS WEEK</h2>
-              <span className="text-sm text-gray-400 mb-1">({newProducts.length})</span>
-            </div>
-            <Link to="/shop" className="text-xs font-semibold uppercase tracking-widest hover:opacity-60 transition-opacity flex items-center gap-1">
-              See All <ArrowRight size={12} />
-            </Link>
+            )}
+            {activeBanner.subtitle && (
+              <p className="text-sm text-stone leading-relaxed max-w-sm mb-8">{activeBanner.subtitle}</p>
+            )}
+            {activeBanner.ctaText && activeBanner.ctaLink && (
+              <Link to={activeBanner.ctaLink} className="btn-gold w-fit">
+                {activeBanner.ctaText}
+              </Link>
+            )}
           </div>
 
-          {loadingNew ? (
-            <div className="flex justify-center py-12">
-              <Loader2 size={24} className="animate-spin text-gray-300" />
-            </div>
-          ) : (
-            <ProductRow products={newProducts} />
+          {/* Carousel controls */}
+          {banners.length > 1 && (
+            <>
+              <button
+                onClick={() => setBannerIdx(i => (i - 1 + banners.length) % banners.length)}
+                className="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 bg-white/20 hover:bg-white/40 flex items-center justify-center text-white transition-colors"
+                aria-label="Previous"
+              >
+                <ChevronLeft size={20} />
+              </button>
+              <button
+                onClick={() => setBannerIdx(i => (i + 1) % banners.length)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 bg-white/20 hover:bg-white/40 flex items-center justify-center text-white transition-colors"
+                aria-label="Next"
+              >
+                <ChevronRight size={20} />
+              </button>
+              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex gap-2">
+                {banners.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setBannerIdx(i)}
+                    className={`w-2 h-2 rounded-full transition-colors ${i === bannerIdx ? 'bg-gold' : 'bg-white/40'}`}
+                    aria-label={`Go to slide ${i + 1}`}
+                  />
+                ))}
+              </div>
+            </>
           )}
-        </div>
-      </section>
-
-      {/* ══ XIV COLLECTIONS 23–24 ══ */}
-      <section className="py-14 border-b border-gray-200">
-        <div className="max-w-content mx-auto px-6 lg:px-10">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
-            <h2 className="headline text-4xl sm:text-5xl text-black">
-              XIV COLLECTIONS<br className="sm:hidden" />
-              <span className="text-gray-400"> 23–24</span>
-            </h2>
-            <div className="flex items-center gap-4 text-xs">
-              <span className="text-gray-400 uppercase tracking-wider">Filters:</span>
-              {['Price', 'Sort By', 'View'].map(f => (
-                <button
-                  key={f}
-                  className="border border-gray-200 px-3 py-1.5 text-xs font-medium uppercase tracking-wide hover:border-black transition-colors"
-                >
-                  {f}
-                </button>
-              ))}
+        </section>
+      ) : (
+        /* Static fallback hero */
+        <section className="relative min-h-[90vh] sm:min-h-screen bg-navy overflow-hidden flex">
+          <div className="relative z-10 flex flex-col justify-center px-8 sm:px-16 lg:px-24 py-24 w-full lg:w-1/2">
+            <p className="eyebrow text-gold mb-6 animate-fade-in">✦ &nbsp; New Collection 2024</p>
+            <h1 className="font-display text-pearl leading-[0.9] mb-6 animate-fade-up"
+                style={{ fontSize: 'clamp(3.5rem, 8vw, 7rem)' }}>
+              Shine<br />
+              <em className="italic font-light text-gold">Your</em><br />
+              Own Light.
+            </h1>
+            <p className="text-sm text-stone leading-relaxed max-w-sm mb-10 animate-fade-up"
+               style={{ animationDelay: '0.2s' }}>
+              Rare by design. Beyond ordinary. Premium bespoke Indian textiles crafted for those who choose timeless.
+            </p>
+            <div className="flex flex-wrap gap-4 animate-fade-up" style={{ animationDelay: '0.3s' }}>
+              <Link to="/shop" className="btn-gold">Explore Collection</Link>
+              <Link to="/custom" className="btn-outline-cream">Custom Made <Sparkles size={12} /></Link>
             </div>
-          </div>
-
-          {loadingCol ? (
-            <div className="flex justify-center py-12">
-              <Loader2 size={24} className="animate-spin text-gray-300" />
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-              {collectionProducts.map(p => {
-                const img = p.mainImageUrl ?? 'https://placehold.co/400x533?text=No+Image'
-                return (
-                  <div key={p.id} className="group">
-                    <Link to={`/product/${p.id}`} className="block">
-                      <div className="product-img aspect-[3/4]">
-                        <img
-                          src={img}
-                          alt={p.name}
-                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
-                        />
-                      </div>
-                      <div className="mt-3 flex items-start justify-between gap-2">
-                        <div>
-                          <p className="eyebrow">{p.categoryName}</p>
-                          <h3 className="text-sm font-medium text-black mt-0.5 leading-snug">{p.name}</h3>
-                        </div>
-                        <p className="text-sm font-semibold text-black shrink-0">$ {p.price.toFixed(2)}</p>
-                      </div>
-                    </Link>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-
-          <div className="mt-10 text-center">
-            <Link to="/shop" className="btn-outline">View All Products</Link>
-          </div>
-        </div>
-      </section>
-
-      {/* ══ OUR APPROACH TO FASHION DESIGN ══ */}
-      <section className="py-20 border-b border-gray-200">
-        <div className="max-w-content mx-auto px-6 lg:px-10">
-          <div className="text-center max-w-lg mx-auto mb-12">
-            <h2 className="text-xl font-semibold text-black tracking-tight">
-              OUR APPROACH TO FASHION DESIGN
-            </h2>
-            <p className="mt-4 text-sm text-gray-500 leading-relaxed">
-              At elegant vogue — we blend creativity with craftsmanship to create fashion that
-              transcends trends and stands the test of time. Each design is meticulously crafted,
-              ensuring the highest quality, exquisite finish.
+            <p className="text-[10px] tracking-widest2 text-stone/60 mt-16 uppercase">
+              Crafted in India · Delivered Worldwide
             </p>
           </div>
+          <div className="hidden lg:block absolute right-0 top-0 w-1/2 h-full">
+            <img src={HERO_IMAGE} alt="ASTRIMI Collection" className="w-full h-full object-cover object-top" />
+            <div className="absolute inset-0 bg-gradient-to-r from-navy via-navy/20 to-transparent" />
+          </div>
+          <div className="absolute inset-0 lg:hidden">
+            <img src={HERO_IMAGE} alt="" className="w-full h-full object-cover object-top opacity-20" />
+          </div>
+        </section>
+      )}
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      {/* ═══════════════════════════════════════════════════════
+          BRAND PHILOSOPHY — 3 values
+      ═══════════════════════════════════════════════════════ */}
+      <section className="section border-b border-mist">
+        <div className="container-astrimi">
+          <div className="grid md:grid-cols-3 gap-8 md:gap-16">
             {[
-              'https://images.unsplash.com/photo-1552902865-b72c031ac5ea?w=500&q=80',
-              'https://images.unsplash.com/photo-1617196034183-421b4040ed20?w=500&q=80',
-              'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=500&q=80',
-              'https://images.unsplash.com/photo-1509631179647-0177331693ae?w=500&q=80',
-            ].map((src, i) => (
-              <div
-                key={i}
-                className={`overflow-hidden bg-gray-100 ${i === 0 || i === 3 ? 'aspect-[3/4]' : 'aspect-[3/5]'}`}
-              >
-                <img src={src} alt="Fashion" className="w-full h-full object-cover hover:scale-105 transition-transform duration-700" />
+              { icon: '✦', title: 'Custom Made', body: 'Every piece can be created exactly to your vision. Size, colour, fabric, finish — truly yours.' },
+              { icon: '◈', title: 'Indian Textiles', body: 'We combine centuries of Indian craftsmanship with contemporary design to create pieces made to be remembered.' },
+              { icon: '◇', title: 'Rare by Design', body: 'ASTRIMI is not for everyone — it is for those who understand the value of quiet luxury and timeless elegance.' },
+            ].map(v => (
+              <div key={v.title} className="text-center">
+                <div className="text-gold text-2xl mb-4">{v.icon}</div>
+                <h3 className="font-display text-xl text-navy mb-3">{v.title}</h3>
+                <p className="text-sm text-stone leading-relaxed">{v.body}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ══ BRAND FOOTER MARK ══ */}
-      <section className="py-20">
-        <div className="max-w-content mx-auto px-6 lg:px-10 text-center">
-          <p className="headline text-[6rem] sm:text-[9rem] lg:text-[12rem] leading-none text-black opacity-[0.06] select-none">
-            XIV QR
-          </p>
-          <div className="-mt-8 relative z-10">
-            <Link to="/shop" className="btn-black mx-auto">
-              Explore Collection <ArrowRight size={14} />
+      {/* ═══════════════════════════════════════════════════════
+          FEATURED PRODUCTS
+      ═══════════════════════════════════════════════════════ */}
+      <section className="section">
+        <div className="container-astrimi">
+          <div className="flex items-end justify-between mb-12">
+            <div>
+              <p className="eyebrow mb-2">The Collection</p>
+              <h2 className="display-lg text-navy">Pieces Made<br /><em className="italic font-light text-gold">to be Remembered</em></h2>
+            </div>
+            <Link to="/shop" className="btn-ghost hidden sm:flex items-center gap-2">
+              View All <ArrowRight size={14} />
             </Link>
           </div>
+
+          {loadingFeatured ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="aspect-[3/4] shimmer" />
+              ))}
+            </div>
+          ) : featured.length > 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5 gap-y-10">
+              {featured.map(p => <ProductCard key={p.id} product={p} />)}
+            </div>
+          ) : (
+            // Placeholder when backend returns empty
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5 gap-y-10">
+              {PLACEHOLDER_PRODUCTS.map((p, i) => (
+                <div key={i} className="card-product">
+                  <div className="aspect-[3/4] bg-cream overflow-hidden">
+                    <img src={p.img} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                  </div>
+                  <div className="pt-3">
+                    <p className="eyebrow text-[9px] mb-1">{p.cat}</p>
+                    <h3 className="text-sm font-medium text-navy">{p.name}</h3>
+                    <p className="text-sm text-navy mt-1">${p.price}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="text-center mt-12 sm:hidden">
+            <Link to="/shop" className="btn-outline-gold btn-sm">View All Pieces</Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════
+          CUSTOM MADE BANNER
+      ═══════════════════════════════════════════════════════ */}
+      <section className="section bg-navy text-pearl overflow-hidden relative">
+        <div className="container-astrimi relative z-10">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <div>
+              <p className="eyebrow text-gold mb-4">Our Speciality</p>
+              <h2 className="display-lg text-pearl mb-6">
+                Not Just Made.<br />
+                <em className="italic font-light text-gold">Made for You.</em>
+              </h2>
+              <p className="text-sm text-stone leading-relaxed mb-6 max-w-md">
+                ASTRIMI is a custom-made and bespoke outfit specialist. We don't believe customers should choose from what's already available.
+              </p>
+              <div className="grid grid-cols-2 gap-3 mb-8">
+                {['Size', 'Colour', 'Fabric', 'Finish', 'Design Details', 'Personal Requirements'].map(opt => (
+                  <div key={opt} className="flex items-center gap-2 text-xs text-stone">
+                    <span className="text-gold text-[8px]">✦</span>
+                    {opt}
+                  </div>
+                ))}
+              </div>
+              <p className="italic-quote text-cream/80 text-sm mb-8 border-l-2 border-gold pl-5">
+                "Your vision. Our craftsmanship.<br />One unique piece."
+              </p>
+              <Link to="/custom" className="btn-gold">
+                Start Your Custom Order <ArrowRight size={14} />
+              </Link>
+            </div>
+            <div className="relative">
+              <img
+                src={TEXTILE_IMAGE}
+                alt="Custom craftsmanship"
+                className="w-full aspect-square object-cover"
+              />
+              <div className="absolute -bottom-4 -left-4 bg-gold text-navy p-5 max-w-[200px]">
+                <p className="font-display text-3xl font-light leading-none mb-1">100%</p>
+                <p className="text-xs tracking-widest uppercase">Bespoke &<br />Custom Made</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        {/* Gold dust decorative text */}
+        <p className="absolute bottom-0 right-0 font-display text-[120px] leading-none text-white/5 select-none whitespace-nowrap">
+          CUSTOM
+        </p>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════
+          3 OPTIONS — Buy / Customise / Create
+      ═══════════════════════════════════════════════════════ */}
+      <section className="section border-y border-mist">
+        <div className="container-astrimi">
+          <div className="text-center mb-14">
+            <p className="eyebrow mb-3">One Design. Many Possibilities.</p>
+            <h2 className="display-md text-navy">
+              See it. Love it.<br />
+              <em className="italic font-light text-gold">Make it yours.</em>
+            </h2>
+          </div>
+          <div className="grid md:grid-cols-3 gap-1">
+            {[
+              {
+                num: '01',
+                title: 'Buy As Shown',
+                desc: 'Purchase the exact piece displayed — real ASTRIMI products, available immediately.',
+                cta: 'Shop Now',
+                to: '/shop?type=ready',
+                badge: 'Ready to Buy',
+              },
+              {
+                num: '02',
+                title: 'Customise the Design',
+                desc: 'Choose a different colour, fabric, size or finish. The same artistry — your personal vision.',
+                cta: 'Customise',
+                to: '/custom',
+                badge: 'Customisable',
+                featured: true,
+              },
+              {
+                num: '03',
+                title: 'Create Your Own',
+                desc: 'Use ASTRIMI as inspiration and create an entirely personalised version with our craftsmen.',
+                cta: 'Get Started',
+                to: '/custom#create',
+                badge: 'Bespoke',
+              },
+            ].map(opt => (
+              <div key={opt.num} className={`p-8 ${opt.featured ? 'bg-navy text-pearl' : 'bg-cream'}`}>
+                <p className={`font-display text-4xl font-light mb-2 ${opt.featured ? 'text-gold' : 'text-mist'}`}>
+                  {opt.num}
+                </p>
+                <span className={`badge mb-4 inline-block ${opt.featured ? 'badge-gold' : 'badge-cream'}`}>
+                  {opt.badge}
+                </span>
+                <h3 className={`font-display text-2xl mb-3 ${opt.featured ? 'text-pearl' : 'text-navy'}`}>
+                  {opt.title}
+                </h3>
+                <p className={`text-sm leading-relaxed mb-6 ${opt.featured ? 'text-stone' : 'text-stone'}`}>
+                  {opt.desc}
+                </p>
+                <Link
+                  to={opt.to}
+                  className={`btn btn-sm inline-flex items-center gap-2 ${
+                    opt.featured ? 'btn-gold' : 'btn-outline-gold'
+                  }`}
+                >
+                  {opt.cta} <ArrowRight size={12} />
+                </Link>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════
+          PRE-ORDERS
+      ═══════════════════════════════════════════════════════ */}
+      <section className="section-cream section">
+        <div className="container-astrimi">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <div>
+              <img src={SARI_IMAGE} alt="Pre-order collection" className="w-full aspect-[4/3] object-cover" />
+            </div>
+            <div>
+              <p className="eyebrow mb-3">Designed with Intention</p>
+              <h2 className="display-md text-navy mb-5">
+                Pre-Order —<br />
+                <em className="italic font-light text-gold">Produced with Purpose</em>
+              </h2>
+              <p className="text-sm text-stone leading-relaxed mb-5 max-w-md">
+                Discover a design, choose your options, and place your order before production begins. ASTRIMI creates pieces specifically for you — reducing waste and ensuring every detail is perfect.
+              </p>
+              <ul className="space-y-3 mb-8">
+                {[
+                  'Greater customisation options',
+                  'Produced only when ordered',
+                  'Conscious, considered fashion',
+                  'Your piece from start to finish',
+                ].map(item => (
+                  <li key={item} className="flex items-start gap-3 text-sm text-stone">
+                    <span className="text-gold mt-0.5">✦</span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <Link to="/shop?type=preorder" className="btn-navy inline-flex items-center gap-2">
+                View Pre-Orders <ChevronRight size={14} />
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════
+          COMMUNITY / PHILOSOPHY
+      ═══════════════════════════════════════════════════════ */}
+      <section className="section bg-navy text-pearl text-center relative overflow-hidden">
+        <div className="container-astrimi narrow relative z-10">
+          <p className="eyebrow text-gold mb-6">Our Philosophy</p>
+          <blockquote className="font-display italic text-pearl leading-relaxed mb-8"
+                      style={{ fontSize: 'clamp(1.5rem, 4vw, 2.5rem)' }}>
+            "True luxury doesn't follow trends.<br />
+            It is felt in the quality of a fabric, seen in the precision of craftsmanship<br />
+            and <span className="text-gold">remembered through the experience.</span>"
+          </blockquote>
+          <div className="divider-gold mx-auto mb-8" />
+          <p className="text-sm text-stone leading-relaxed max-w-lg mx-auto mb-10">
+            We believe fashion should speak quietly — but leave a lasting impression. Less noise. More presence. Heritage reimagined. Craftsmanship without borders.
+          </p>
+          <Link to="/story" className="btn-outline-cream btn-sm inline-flex items-center gap-2">
+            Our Story <ArrowRight size={12} />
+          </Link>
+        </div>
+        <p className="absolute -bottom-8 left-1/2 -translate-x-1/2 font-display text-[100px] sm:text-[160px] leading-none text-white/5 select-none whitespace-nowrap">
+          ASTRIMI
+        </p>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════
+          COMMUNITY CALLOUT
+      ═══════════════════════════════════════════════════════ */}
+      <section className="section border-t border-mist">
+        <div className="container-astrimi text-center">
+          <p className="eyebrow mb-4">Build Community</p>
+          <h2 className="display-md text-navy mb-5">
+            People don't only buy clothes.<br />
+            <em className="italic font-light text-gold">They buy a feeling.</em>
+          </h2>
+          <p className="text-sm text-stone max-w-xl mx-auto leading-relaxed mb-10">
+            Become part of a community that believes in individuality, craftsmanship, creativity, timeless style and self-expression. ASTRIMI is a world you'll want to belong to.
+          </p>
+          <div className="flex flex-wrap justify-center gap-3 mb-12">
+            {['Individuality', 'Craftsmanship', 'Creativity', 'Timeless Style', 'Self-Expression'].map(v => (
+              <span key={v} className="badge-cream text-xs px-4 py-2 tracking-widest uppercase font-medium">
+                {v}
+              </span>
+            ))}
+          </div>
+          <Link to="/shop" className="btn-gold">
+            Discover ASTRIMI <Sparkles size={14} />
+          </Link>
         </div>
       </section>
 
     </main>
   )
 }
+
+// Placeholder products when backend is empty
+const PLACEHOLDER_PRODUCTS = [
+  { name: 'Silk Embroidered Kurta', cat: 'Custom Made', price: '280', img: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=600&q=80' },
+  { name: 'Banarasi Silk Saree', cat: 'Ready to Buy', price: '420', img: 'https://images.unsplash.com/photo-1585487000160-6ebcfceb0d03?w=600&q=80' },
+  { name: 'Chanderi Co-ord Set', cat: 'Pre-Order', price: '350', img: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80' },
+  { name: 'Zardozi Lehenga', cat: 'Bespoke', price: '890', img: 'https://images.unsplash.com/photo-1519851856928-ba6e3f81b26b?w=600&q=80' },
+  { name: 'Linen Anarkali', cat: 'Custom Made', price: '320', img: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=600&q=80' },
+  { name: 'Kantha Work Tunic', cat: 'Ready to Buy', price: '195', img: 'https://images.unsplash.com/photo-1585487000160-6ebcfceb0d03?w=600&q=80' },
+  { name: 'Ikat Print Dress', cat: 'Pre-Order', price: '240', img: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80' },
+  { name: 'Velvet Blazer', cat: 'Custom Made', price: '480', img: 'https://images.unsplash.com/photo-1519851856928-ba6e3f81b26b?w=600&q=80' },
+]

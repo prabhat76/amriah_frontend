@@ -404,6 +404,113 @@ export const userApi = {
   me: () => get<UserResponse>('/users/me'),
 }
 
+// ─── Banner API ───────────────────────────────────────────────────────────────
+
+export interface BannerResponse {
+  id: string
+  title: string | null
+  subtitle: string | null
+  ctaText: string | null
+  ctaLink: string | null
+  imageUrl: string
+  displayOrder: number
+  active: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export const bannerApi = {
+  // Public
+  list: () => get<BannerResponse[]>('/banners', false),
+
+  // Admin
+  listAll: () => get<BannerResponse[]>('/banners/admin'),
+  getById: (id: string) => get<BannerResponse>(`/banners/admin/${id}`),
+
+  create: (body: {
+    title?: string; subtitle?: string; ctaText?: string; ctaLink?: string
+    imageUrl: string; displayOrder?: number; active?: boolean
+  }) => post<BannerResponse>('/banners/admin', body),
+
+  update: (id: string, body: {
+    title?: string; subtitle?: string; ctaText?: string; ctaLink?: string
+    imageUrl?: string; displayOrder?: number; active?: boolean
+  }) => request<BannerResponse>('PUT', `/banners/admin/${id}`, body),
+
+  uploadAndCreate: (
+    file: File,
+    meta: { title?: string; subtitle?: string; ctaText?: string; ctaLink?: string; displayOrder?: number; active?: boolean }
+  ) => {
+    const form = new FormData()
+    form.append('file', file)
+    if (meta.title) form.append('title', meta.title)
+    if (meta.subtitle) form.append('subtitle', meta.subtitle)
+    if (meta.ctaText) form.append('ctaText', meta.ctaText)
+    if (meta.ctaLink) form.append('ctaLink', meta.ctaLink)
+    if (meta.displayOrder != null) form.append('displayOrder', String(meta.displayOrder))
+    if (meta.active != null) form.append('active', String(meta.active))
+    const t = token.get()
+    const headers: Record<string, string> = {}
+    if (t) headers['Authorization'] = `Bearer ${t}`
+    return fetch(`${BASE}/banners/admin/upload`, { method: 'POST', headers, body: form })
+      .then(r => r.json() as Promise<ApiResponse<BannerResponse>>)
+      .then(j => { if (!j.success) throw new ApiError(400, j.errorCode ?? 'ERROR', j.message); return j.data })
+  },
+
+  delete: (id: string) => del<void>(`/banners/admin/${id}`),
+}
+
+// ─── Admin Dashboard API ──────────────────────────────────────────────────────
+
+export interface DashboardSummary {
+  totalRevenue: number
+  revenueToday: number
+  ordersTotal: number
+  ordersPending: number
+  ordersShipped: number
+  totalCustomers: number
+  newCustomersToday: number
+  totalProducts: number
+  lowStockProducts: number
+  averageOrderValue: number
+  [key: string]: unknown
+}
+
+export const adminApi = {
+  summary: () => get<DashboardSummary>('/admin/dashboard/summary'),
+  revenueChart: (days = 30) => get<Record<string, unknown>>(`/admin/dashboard/revenue-chart?days=${days}`),
+  topProducts: (limit = 10, days = 30) => get<Record<string, unknown>>(`/admin/dashboard/top-products?limit=${limit}&days=${days}`),
+}
+
+// ─── Admin Orders API ─────────────────────────────────────────────────────────
+
+export const adminOrdersApi = {
+  list: (status: string, page = 0, size = 50) =>
+    get<PageResponse<OrderResponse>>(`/admin/orders?status=${status}&page=${page}&size=${size}`),
+
+  get: (orderNumber: string) =>
+    get<OrderResponse>(`/admin/orders/${orderNumber}`),
+
+  updateStatus: (orderNumber: string, body: { status: string; trackingNumber?: string; shippingCarrier?: string }) =>
+    request<OrderResponse>('PATCH', `/admin/orders/${orderNumber}/status`, body),
+}
+
+// ─── Admin Products API ───────────────────────────────────────────────────────
+
+export const adminProductsApi = {
+  uploadImage: (productId: string, file: File, setAsMain = false) => {
+    const form = new FormData()
+    form.append('file', file)
+    form.append('setAsMain', String(setAsMain))
+    const t = token.get()
+    const headers: Record<string, string> = {}
+    if (t) headers['Authorization'] = `Bearer ${t}`
+    return fetch(`${BASE}/products/${productId}/images/upload`, { method: 'POST', headers, body: form })
+      .then(r => r.json() as Promise<ApiResponse<unknown>>)
+      .then(j => { if (!j.success) throw new ApiError(400, j.errorCode ?? 'ERROR', j.message); return j.data })
+  },
+}
+
 // ─── AI API ───────────────────────────────────────────────────────────────────
 
 export const aiApi = {

@@ -1,214 +1,237 @@
-import { useState, useRef, useEffect } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { ShoppingBag, Search, Menu, X, User, Package, LogOut, ChevronDown } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Link, NavLink, useNavigate } from 'react-router-dom'
+import { Search, ShoppingBag, User, Menu, X } from 'lucide-react'
 import { useCart } from '@/context/CartContext'
 import { useAuth } from '@/context/AuthContext'
 
-const NAV_LINKS = [
-  { label: 'Home', to: '/' },
-  { label: 'Collections', to: '/shop' },
-  { label: 'New', to: '/shop?category=new' },
-]
-
-function UserMenu() {
-  const { user, logout } = useAuth()
+export default function Navbar() {
+  const { itemCount, openCart } = useCart()
+  const { isLoggedIn, user, logout } = useAuth()
+  const [scrolled, setScrolled] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const [userOpen, setUserOpen] = useState(false)
   const navigate = useNavigate()
-  const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-    }
-    document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
+    const onScroll = () => setScrolled(window.scrollY > 40)
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  const handleLogout = () => {
-    logout()
-    setOpen(false)
-    navigate('/')
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (query.trim()) {
+      navigate(`/shop?q=${encodeURIComponent(query.trim())}`)
+      setSearchOpen(false)
+      setQuery('')
+    }
   }
 
-  return (
-    <div ref={ref} className="relative">
-      <button
-        onClick={() => setOpen(v => !v)}
-        className="flex items-center gap-1 text-black hover:text-gray-500 transition-colors"
-        aria-label="Account"
-      >
-        <User size={18} />
-        <ChevronDown size={11} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
-      </button>
-
-      {open && (
-        <div className="absolute right-0 top-full mt-2 w-52 bg-white border border-gray-100 shadow-lg z-50">
-          {/* User info */}
-          <div className="px-4 py-3 border-b border-gray-50">
-            <p className="text-xs font-semibold truncate">{user?.firstName} {user?.lastName}</p>
-            <p className="text-[11px] text-gray-400 truncate">{user?.email}</p>
-          </div>
-          {/* Links */}
-          <Link
-            to="/orders"
-            onClick={() => setOpen(false)}
-            className="flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors"
-          >
-            <Package size={14} /> My Orders
-          </Link>
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-left hover:bg-gray-50 transition-colors text-red-600"
-          >
-            <LogOut size={14} /> Sign Out
-          </button>
-        </div>
-      )}
-    </div>
-  )
-}
-
-export default function Navbar() {
-  const { itemCount, toggleCart } = useCart()
-  const { isLoggedIn, isLoading } = useAuth()
-  const [mobileOpen, setMobileOpen] = useState(false)
-  const [searchOpen, setSearchOpen] = useState(false)
-  const { pathname } = useLocation()
+  const navLinks = [
+    { label: 'Collections', to: '/shop' },
+    { label: 'Custom Made', to: '/custom' },
+    { label: 'Pre-Orders', to: '/shop?type=preorder' },
+    { label: 'Our Story', to: '/story' },
+  ]
 
   return (
     <>
-      <header className="sticky top-0 z-50 bg-white border-b border-gray-200">
-        <div className="max-w-content mx-auto px-6 lg:px-10">
-          <div className="flex items-center h-14 gap-6">
+      {/* Top marquee — brand message */}
+      <div className="bg-navy text-gold text-[10px] tracking-widest2 uppercase text-center py-2 overflow-hidden">
+        <span className="inline-block whitespace-nowrap">
+          ✦ Rare by Design. Beyond Ordinary. &nbsp;·&nbsp; Shine Your Own Light. &nbsp;·&nbsp; Custom Made in India &nbsp;·&nbsp; ✦
+        </span>
+      </div>
 
-            {/* Mobile: burger */}
-            <button
-              className="lg:hidden shrink-0"
-              onClick={() => setMobileOpen(v => !v)}
-              aria-label="Menu"
-            >
-              {mobileOpen ? <X size={20} /> : <Menu size={20} />}
-            </button>
+      {/* Main navbar */}
+      <header className={`sticky top-0 z-50 transition-all duration-500 ${
+        scrolled ? 'bg-pearl/95 backdrop-blur-md shadow-sm border-b border-mist' : 'bg-pearl border-b border-mist'
+      }`}>
+        <div className="container-astrimi">
+          <div className="flex items-center justify-between h-16 sm:h-20">
 
-            {/* Nav links (desktop left) */}
+            {/* Left nav — desktop */}
             <nav className="hidden lg:flex items-center gap-8">
-              {NAV_LINKS.map(l => (
-                <Link
+              {navLinks.slice(0, 2).map(l => (
+                <NavLink
                   key={l.to}
                   to={l.to}
-                  className={`text-sm font-medium transition-colors ${
-                    (l.to === '/' ? pathname === '/' : pathname === l.to)
-                      ? 'text-black'
-                      : 'text-gray-500 hover:text-black'
-                  }`}
+                  className={({ isActive }) =>
+                    `text-xs tracking-widest uppercase font-medium transition-colors duration-200 ${
+                      isActive ? 'text-gold' : 'text-navy hover:text-gold'
+                    }`
+                  }
                 >
                   {l.label}
-                </Link>
+                </NavLink>
               ))}
             </nav>
 
-            {/* Logo center */}
-            <div className="flex-1 flex justify-center">
-              <Link
-                to="/"
-                className="font-display text-[1.6rem] tracking-[0.08em] uppercase text-black select-none"
-                style={{ fontFamily: 'Anton, Impact, sans-serif' }}
-              >
-                XIV QR
-              </Link>
-            </div>
+            {/* Logo — center */}
+            <Link
+              to="/"
+              className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center group"
+            >
+              <span className="font-display text-2xl sm:text-3xl font-light tracking-[0.2em] text-navy group-hover:text-gold transition-colors duration-300">
+                ASTRIMI
+              </span>
+              <span className="text-[7px] tracking-widest2 text-stone font-body uppercase -mt-0.5 hidden sm:block">
+                Shine Your Own Light
+              </span>
+            </Link>
 
-            {/* Right actions */}
-            <div className="flex items-center gap-3 ml-auto">
+            {/* Right nav — desktop */}
+            <nav className="hidden lg:flex items-center gap-8">
+              {navLinks.slice(2).map(l => (
+                <NavLink
+                  key={l.to}
+                  to={l.to}
+                  className={({ isActive }) =>
+                    `text-xs tracking-widest uppercase font-medium transition-colors duration-200 ${
+                      isActive ? 'text-gold' : 'text-navy hover:text-gold'
+                    }`
+                  }
+                >
+                  {l.label}
+                </NavLink>
+              ))}
+            </nav>
+
+            {/* Icon cluster */}
+            <div className="flex items-center gap-3 sm:gap-5 ml-auto lg:ml-0">
+              {/* Search */}
               <button
                 onClick={() => setSearchOpen(v => !v)}
+                className="text-navy hover:text-gold transition-colors"
                 aria-label="Search"
-                className="text-black hover:text-gray-500 transition-colors"
               >
                 <Search size={18} />
               </button>
 
-              {/* Auth */}
-              {!isLoading && (
-                isLoggedIn
-                  ? <UserMenu />
-                  : (
-                    <Link
-                      to="/login"
-                      state={{ from: pathname }}
-                      className="text-black hover:text-gray-500 transition-colors"
-                      aria-label="Sign in"
-                    >
-                      <User size={18} />
-                    </Link>
-                  )
-              )}
+              {/* User */}
+              <div className="relative">
+                <button
+                  onClick={() => setUserOpen(v => !v)}
+                  className="text-navy hover:text-gold transition-colors"
+                  aria-label="Account"
+                >
+                  <User size={18} />
+                </button>
+                {userOpen && (
+                  <div className="absolute right-0 top-8 w-44 bg-pearl border border-mist shadow-lg z-50 py-2">
+                    {isLoggedIn ? (
+                      <>
+                        <p className="px-4 py-2 text-xs text-stone border-b border-mist truncate">
+                          {user?.firstName} {user?.lastName}
+                        </p>
+                        <Link to="/orders" className="block px-4 py-2 text-xs hover:bg-cream hover:text-gold transition-colors" onClick={() => setUserOpen(false)}>
+                          My Orders
+                        </Link>
+                        <button
+                          onClick={() => { logout(); setUserOpen(false) }}
+                          className="w-full text-left px-4 py-2 text-xs hover:bg-cream hover:text-gold transition-colors"
+                        >
+                          Sign Out
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <Link to="/login" className="block px-4 py-2 text-xs hover:bg-cream hover:text-gold transition-colors" onClick={() => setUserOpen(false)}>
+                          Sign In
+                        </Link>
+                        <Link to="/register" className="block px-4 py-2 text-xs hover:bg-cream hover:text-gold transition-colors" onClick={() => setUserOpen(false)}>
+                          Create Account
+                        </Link>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
 
               {/* Cart */}
               <button
-                onClick={toggleCart}
+                onClick={openCart}
+                className="relative text-navy hover:text-gold transition-colors"
                 aria-label="Cart"
-                className="relative text-black hover:text-gray-500 transition-colors"
               >
                 <ShoppingBag size={18} />
                 {itemCount > 0 && (
-                  <span className="absolute -top-1 -right-1.5 bg-black text-white text-[8px] font-bold min-w-[14px] h-3.5 px-0.5 flex items-center justify-center rounded-full leading-none">
-                    {itemCount}
+                  <span className="absolute -top-2 -right-2 w-4 h-4 bg-gold text-navy text-[9px] font-bold rounded-full flex items-center justify-center">
+                    {itemCount > 9 ? '9+' : itemCount}
                   </span>
                 )}
               </button>
+
+              {/* Mobile menu */}
+              <button
+                onClick={() => setMenuOpen(v => !v)}
+                className="lg:hidden text-navy hover:text-gold transition-colors"
+                aria-label="Menu"
+              >
+                {menuOpen ? <X size={20} /> : <Menu size={20} />}
+              </button>
             </div>
           </div>
-
-          {/* Search row */}
-          {searchOpen && (
-            <div className="border-t border-gray-100 py-3">
-              <input
-                autoFocus
-                type="text"
-                placeholder="Search products…"
-                className="w-full text-sm bg-transparent focus:outline-none placeholder-gray-400"
-              />
-            </div>
-          )}
         </div>
 
+        {/* Search bar */}
+        {searchOpen && (
+          <div className="border-t border-mist bg-pearl">
+            <div className="container-astrimi py-4">
+              <form onSubmit={handleSearch} className="flex gap-3">
+                <input
+                  type="text"
+                  value={query}
+                  onChange={e => setQuery(e.target.value)}
+                  autoFocus
+                  placeholder="Search ASTRIMI…"
+                  className="field flex-1 text-sm"
+                />
+                <button type="submit" className="btn-gold btn-sm">Search</button>
+              </form>
+            </div>
+          </div>
+        )}
+
         {/* Mobile menu */}
-        {mobileOpen && (
-          <div className="lg:hidden border-t border-gray-100 bg-white">
-            <nav className="flex flex-col px-6 py-4 gap-0">
-              {NAV_LINKS.map(l => (
-                <Link
+        {menuOpen && (
+          <div className="lg:hidden border-t border-mist bg-pearl">
+            <nav className="container-astrimi py-6 flex flex-col gap-5">
+              {navLinks.map(l => (
+                <NavLink
                   key={l.to}
                   to={l.to}
-                  className="py-4 text-sm font-medium border-b border-gray-100 text-black hover:text-gray-500 transition-colors"
-                  onClick={() => setMobileOpen(false)}
+                  onClick={() => setMenuOpen(false)}
+                  className={({ isActive }) =>
+                    `text-sm tracking-widest uppercase font-medium ${isActive ? 'text-gold' : 'text-navy'}`
+                  }
                 >
                   {l.label}
-                </Link>
+                </NavLink>
               ))}
-              {!isLoading && !isLoggedIn && (
-                <Link
-                  to="/login"
-                  className="py-4 text-sm font-medium text-black hover:text-gray-500 transition-colors"
-                  onClick={() => setMobileOpen(false)}
-                >
-                  Sign In
-                </Link>
-              )}
-              {!isLoading && isLoggedIn && (
-                <Link
-                  to="/orders"
-                  className="py-4 text-sm font-medium border-b border-gray-100 text-black hover:text-gray-500 transition-colors"
-                  onClick={() => setMobileOpen(false)}
-                >
-                  My Orders
-                </Link>
+              <div className="divider mt-2" />
+              {isLoggedIn ? (
+                <>
+                  <Link to="/orders" onClick={() => setMenuOpen(false)} className="text-sm text-stone">My Orders</Link>
+                  <button onClick={() => { logout(); setMenuOpen(false) }} className="text-sm text-left text-stone">Sign Out</button>
+                </>
+              ) : (
+                <>
+                  <Link to="/login" onClick={() => setMenuOpen(false)} className="text-sm text-stone">Sign In</Link>
+                  <Link to="/register" onClick={() => setMenuOpen(false)} className="text-sm text-stone">Create Account</Link>
+                </>
               )}
             </nav>
           </div>
         )}
       </header>
+
+      {/* Backdrop for dropdowns */}
+      {(userOpen || menuOpen) && (
+        <div className="fixed inset-0 z-40" onClick={() => { setUserOpen(false); setMenuOpen(false) }} />
+      )}
     </>
   )
 }
