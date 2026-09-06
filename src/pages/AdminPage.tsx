@@ -7,7 +7,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import {
-  adminApi, adminOrdersApi, bannerApi, productsApi,
+  adminApi, adminOrdersApi, adminProductsApi, bannerApi, productsApi,
   DashboardSummary, BannerResponse, OrderResponse, ProductSummary,
   ApiError
 } from '@/lib/api'
