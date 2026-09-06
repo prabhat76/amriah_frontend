@@ -1,15 +1,30 @@
 import { createContext, useContext, useState, ReactNode } from 'react'
-import { ProductSummary } from '@/lib/api'
-import { CartItem } from '@/types'
+
+export interface CartItem {
+  variantId: string
+  productId: string
+  productName: string
+  size: string
+  color: string
+  imageUrl: string | null
+  unitPrice: number
+  qty: number
+}
 
 interface CartContextType {
   items: CartItem[]
   isOpen: boolean
   itemCount: number
   subtotal: number
-  addItem: (product: ProductSummary, variantId: string, color: string, size: string, qty?: number) => void
-  removeItem: (id: string, variantId: string) => void
-  updateQty: (id: string, variantId: string, qty: number) => void
+  addItem: (
+    product: { id: string; name: string; mainImageUrl?: string | null; price: number },
+    variantId: string,
+    color: string,
+    size: string,
+    qty?: number
+  ) => void
+  removeItem: (variantId: string, color: string, size: string) => void
+  updateQty: (variantId: string, color: string, size: string, qty: number) => void
   clearCart: () => void
   toggleCart: () => void
   openCart: () => void
@@ -22,26 +37,49 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([])
   const [isOpen, setIsOpen] = useState(false)
 
-  const addItem = (product: ProductSummary, variantId: string, color: string, size: string, qty = 1) => {
+  const addItem = (
+    product: { id: string; name: string; mainImageUrl?: string | null; price: number },
+    variantId: string,
+    color: string,
+    size: string,
+    qty = 1,
+  ) => {
     setItems(prev => {
-      const existing = prev.find(i => i.variantId === variantId)
+      const existing = prev.find(
+        i => i.variantId === variantId && i.color === color && i.size === size,
+      )
       if (existing) {
-        return prev.map(i => i.variantId === variantId ? { ...i, qty: i.qty + qty } : i)
+        return prev.map(i =>
+          i.variantId === variantId && i.color === color && i.size === size
+            ? { ...i, qty: i.qty + qty }
+            : i,
+        )
       }
-      return [...prev, { product, variantId, color, size, qty }]
+      return [...prev, {
+        variantId,
+        productId: product.id,
+        productName: product.name,
+        imageUrl: product.mainImageUrl ?? null,
+        unitPrice: product.price,
+        color,
+        size,
+        qty,
+      }]
     })
   }
 
-  const removeItem = (id: string, variantId: string) => {
-    setItems(prev => prev.filter(i => !(i.product.id === id && i.variantId === variantId)))
+  const removeItem = (variantId: string, color: string, size: string) => {
+    setItems(prev =>
+      prev.filter(i => !(i.variantId === variantId && i.color === color && i.size === size)),
+    )
   }
 
-  const updateQty = (id: string, variantId: string, qty: number) => {
-    if (qty <= 0) { removeItem(id, variantId); return }
+  const updateQty = (variantId: string, color: string, size: string, qty: number) => {
+    if (qty <= 0) { removeItem(variantId, color, size); return }
     setItems(prev =>
       prev.map(i =>
-        i.product.id === id && i.variantId === variantId ? { ...i, qty } : i
-      )
+        i.variantId === variantId && i.color === color && i.size === size ? { ...i, qty } : i,
+      ),
     )
   }
 
@@ -50,11 +88,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const openCart = () => setIsOpen(true)
   const closeCart = () => setIsOpen(false)
 
-  const itemCount = items.reduce((sum, i) => sum + i.qty, 0)
-  const subtotal = items.reduce((sum, i) => sum + i.product.price * i.qty, 0)
+  const itemCount = items.reduce((s, i) => s + i.qty, 0)
+  const subtotal = items.reduce((s, i) => s + i.unitPrice * i.qty, 0)
 
   return (
-    <CartContext.Provider value={{ items, isOpen, itemCount, subtotal, addItem, removeItem, updateQty, clearCart, toggleCart, openCart, closeCart }}>
+    <CartContext.Provider value={{
+      items, isOpen, itemCount, subtotal,
+      addItem, removeItem, updateQty, clearCart,
+      toggleCart, openCart, closeCart,
+    }}>
       {children}
     </CartContext.Provider>
   )

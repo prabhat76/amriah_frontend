@@ -1,279 +1,287 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { ChevronRight, Lock, CheckCircle2, Loader2, AlertCircle } from 'lucide-react'
+import { useState, FormEvent } from 'react'
+import { Link } from 'react-router-dom'
+import { Lock, CheckCircle2, Loader2, ChevronRight } from 'lucide-react'
 import { useCart } from '@/context/CartContext'
 import { addressApi, ordersApi, ApiError } from '@/lib/api'
 
-type Step = 'information' | 'shipping' | 'payment'
+type Step = 'address' | 'payment'
+const PLACEHOLDER = 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=100&q=70'
 
 export default function CheckoutPage() {
   const { items, subtotal, clearCart } = useCart()
-  const navigate = useNavigate()
+  const [step, setStep] = useState<Step>('address')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [orderNumber, setOrderNumber] = useState<string | null>(null)
 
-  const [step, setStep] = useState<Step>('information')
-  const [submitting, setSubmitting] = useState(false)
-  const [apiError, setApiError] = useState<string | null>(null)
-
-  const [form, setForm] = useState({
-    email: '',
-    firstName: '', lastName: '',
-    address: '', city: '', state: '', zip: '', phone: '',
-    shipping: 'standard',
-    card: '', name: '', expiry: '', cvv: '',
-    coupon: '',
+  const [address, setAddress] = useState({
+    fullName: '', phone: '', line1: '', line2: '',
+    city: '', stateProvince: '', postalCode: '', country: 'GB',
   })
-  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
-    setForm(p => ({ ...p, [k]: e.target.value }))
+  const [payment, setPayment] = useState({ method: 'COD' })
 
-  const shippingCost = form.shipping === 'express' ? 199 : subtotal > 36 ? 0 : 99
-  const total = subtotal + shippingCost
+  const setA = (k: keyof typeof address) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+    setAddress(p => ({ ...p, [k]: e.target.value }))
 
-  const steps: Step[] = ['information', 'shipping', 'payment']
-  const stepIdx = steps.indexOf(step)
+  const shipping = subtotal > 150 ? 0 : 12
+  const total = subtotal + shipping
+  const tax = total * 0.1
 
-  const handlePlaceOrder = async (e: React.FormEvent) => {
+  const handleAddressSubmit = (e: FormEvent) => {
     e.preventDefault()
-    setApiError(null)
-    setSubmitting(true)
+    setStep('payment')
+  }
 
+  const handlePlaceOrder = async (e: FormEvent) => {
+    e.preventDefault()
+    setLoading(true); setError(null)
     try {
-      // 1. Create (or reuse) shipping address
+      // Create address first
       const addr = await addressApi.create({
-        fullName: `${form.firstName} ${form.lastName}`,
-        phone: form.phone,
-        line1: form.address,
-        city: form.city,
-        stateProvince: form.state,
-        postalCode: form.zip,
-        country: 'IN',
+        fullName: address.fullName,
+        phone: address.phone,
+        line1: address.line1,
+        line2: address.line2 || undefined,
+        city: address.city,
+        stateProvince: address.stateProvince,
+        postalCode: address.postalCode,
+        country: address.country,
       })
-
-      // 2. Place the order
+      // Place order
       const order = await ordersApi.checkout({
         shippingAddressId: addr.id,
-        paymentMethod: 'CARD',
-        couponCode: form.coupon || undefined,
+        paymentMethod: payment.method,
       })
-
-      // 3. Clear local cart and redirect to order confirmation
       clearCart()
-      navigate(`/orders/${order.orderNumber}`, { replace: true })
-    } catch (err) {
-      const msg = err instanceof ApiError ? err.message : 'Something went wrong. Please try again.'
-      setApiError(msg)
+      setOrderNumber(order.orderNumber)
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Failed to place order. Please try again.')
     } finally {
-      setSubmitting(false)
+      setLoading(false)
     }
   }
 
-  if (items.length === 0) {
+  // Success screen
+  if (orderNumber) {
     return (
-      <main className="min-h-[70vh] flex items-center justify-center bg-white">
-        <div className="max-w-sm text-center px-6">
-          <CheckCircle2 size={40} className="mx-auto text-gray-200 mb-6" />
-          <h1 className="headline text-4xl mb-4" style={{ fontFamily: 'Anton, Impact, sans-serif' }}>
-            CART IS EMPTY
+      <main className="min-h-[80vh] bg-pearl flex items-center justify-center px-6 py-20">
+        <div className="max-w-md text-center">
+          <div className="w-16 h-16 bg-gold/10 flex items-center justify-center mx-auto mb-6">
+            <CheckCircle2 size={28} className="text-gold" />
+          </div>
+          <p className="eyebrow mb-3 text-gold">Order Confirmed</p>
+          <h1 className="display-md text-navy mb-4">
+            Your piece is<br />
+            <em className="italic font-light text-gold">on its way.</em>
           </h1>
-          <Link to="/shop" className="btn-black w-full justify-center block mt-4">
-            Browse Products
-          </Link>
+          <p className="text-sm text-stone mb-2">Order reference:</p>
+          <p className="font-display text-xl text-navy mb-6">{orderNumber}</p>
+          <p className="text-xs text-stone leading-relaxed mb-8">
+            You'll receive a confirmation email shortly. Our team will be in touch if your order includes a custom piece.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Link to={`/orders/${orderNumber}`} className="btn-gold">Track Order</Link>
+            <Link to="/shop" className="btn-outline-gold">Continue Shopping</Link>
+          </div>
         </div>
       </main>
     )
   }
 
   return (
-    <main className="bg-white min-h-screen">
+    <main className="bg-pearl min-h-screen">
       {/* Header */}
-      <div className="border-b border-gray-200 px-6 lg:px-10 py-5">
-        <div className="max-w-content mx-auto flex items-center justify-between">
-          <Link to="/" className="headline text-2xl" style={{ fontFamily: 'Anton, Impact, sans-serif' }}>
-            XIV QR
-          </Link>
-          <div className="flex items-center gap-1 text-xs text-gray-400">
+      <div className="border-b border-mist bg-pearl">
+        <div className="container-astrimi py-5 flex items-center justify-between">
+          <Link to="/" className="font-display text-xl tracking-[0.2em] text-navy">ASTRIMI</Link>
+          <div className="flex items-center gap-1.5 text-xs text-stone">
             <Lock size={11} /> Secure checkout
           </div>
         </div>
       </div>
 
-      <div className="max-w-content mx-auto px-6 lg:px-10 py-10">
-        <div className="grid lg:grid-cols-[1fr_360px] gap-12 items-start">
+      {/* Breadcrumb stepper */}
+      <div className="border-b border-mist bg-pearl">
+        <div className="container-astrimi py-4">
+          <div className="flex items-center gap-3 text-xs">
+            <Link to="/shop" className="caption hover:text-gold transition-colors">Cart</Link>
+            <ChevronRight size={10} className="text-stone" />
+            <span className={step === 'address' ? 'text-navy font-medium' : 'text-stone'}>Delivery</span>
+            <ChevronRight size={10} className="text-stone" />
+            <span className={step === 'payment' ? 'text-navy font-medium' : 'text-stone'}>Payment</span>
+          </div>
+        </div>
+      </div>
 
-          {/* ── FORM SIDE ── */}
+      <div className="container-astrimi py-10">
+        <div className="grid lg:grid-cols-[1fr_380px] gap-12 items-start">
+
+          {/* Form */}
           <div>
-            <h1 className="headline text-4xl mb-2" style={{ fontFamily: 'Anton, Impact, sans-serif' }}>
-              CHECKOUT
-            </h1>
-
-            {/* Step tabs */}
-            <div className="flex items-center gap-1 mb-8 text-xs">
-              {steps.map((s, i) => (
-                <span key={s} className="flex items-center gap-1">
-                  <button
-                    disabled={i > stepIdx}
-                    onClick={() => i < stepIdx && setStep(s)}
-                    className={`capitalize font-medium transition-colors ${
-                      i === stepIdx ? 'text-black' :
-                      i < stepIdx ? 'text-gray-400 hover:text-black cursor-pointer underline' :
-                      'text-gray-300'
-                    }`}
-                  >
-                    {s}
-                  </button>
-                  {i < steps.length - 1 && <ChevronRight size={10} className="text-gray-300" />}
-                </span>
-              ))}
-            </div>
-
-            {/* Global API error */}
-            {apiError && (
-              <div className="flex items-start gap-2 bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 mb-5">
-                <AlertCircle size={15} className="shrink-0 mt-0.5" />
-                {apiError}
-              </div>
-            )}
-
-            {/* ── INFORMATION ── */}
-            {step === 'information' && (
-              <form onSubmit={e => { e.preventDefault(); setStep('shipping') }} className="space-y-5">
+            {/* Address step */}
+            {step === 'address' && (
+              <form onSubmit={handleAddressSubmit} className="space-y-6">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.12em] mb-3">Contact Info</p>
-                  <input placeholder="Email" type="email" required value={form.email} onChange={set('email')} className="field" />
+                  <p className="eyebrow mb-2">01</p>
+                  <h2 className="display-md text-navy mb-6">Delivery Address</h2>
                 </div>
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.12em] mb-3">Shipping Address</p>
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-3">
-                      <input placeholder="First name" required value={form.firstName} onChange={set('firstName')} className="field" />
-                      <input placeholder="Last name" required value={form.lastName} onChange={set('lastName')} className="field" />
-                    </div>
-                    <input placeholder="Address" required value={form.address} onChange={set('address')} className="field" />
-                    <div className="grid grid-cols-3 gap-3">
-                      <input placeholder="City" required value={form.city} onChange={set('city')} className="field" />
-                      <input placeholder="State" required value={form.state} onChange={set('state')} className="field" />
-                      <input placeholder="ZIP / PIN" required value={form.zip} onChange={set('zip')} className="field" />
-                    </div>
-                    <input placeholder="Phone" type="tel" required value={form.phone} onChange={set('phone')} className="field" />
+                <div className="grid sm:grid-cols-2 gap-5">
+                  <div className="sm:col-span-2">
+                    <label className="caption mb-2 block uppercase tracking-widest">Full Name *</label>
+                    <input type="text" value={address.fullName} onChange={setA('fullName')} required className="field" placeholder="Jane Doe" />
+                  </div>
+                  <div>
+                    <label className="caption mb-2 block uppercase tracking-widest">Phone *</label>
+                    <input type="tel" value={address.phone} onChange={setA('phone')} required className="field" placeholder="+44 000 000 0000" />
+                  </div>
+                  <div>
+                    <label className="caption mb-2 block uppercase tracking-widest">Country *</label>
+                    <select value={address.country} onChange={setA('country')} required className="field">
+                      <option value="GB">United Kingdom</option>
+                      <option value="IN">India</option>
+                      <option value="US">United States</option>
+                      <option value="AE">UAE</option>
+                      <option value="CA">Canada</option>
+                      <option value="AU">Australia</option>
+                      <option value="SG">Singapore</option>
+                      <option value="DE">Germany</option>
+                      <option value="FR">France</option>
+                    </select>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="caption mb-2 block uppercase tracking-widest">Address Line 1 *</label>
+                    <input type="text" value={address.line1} onChange={setA('line1')} required className="field" placeholder="House / flat / building" />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="caption mb-2 block uppercase tracking-widest">Address Line 2</label>
+                    <input type="text" value={address.line2} onChange={setA('line2')} className="field" placeholder="Street, area (optional)" />
+                  </div>
+                  <div>
+                    <label className="caption mb-2 block uppercase tracking-widest">City *</label>
+                    <input type="text" value={address.city} onChange={setA('city')} required className="field" placeholder="London" />
+                  </div>
+                  <div>
+                    <label className="caption mb-2 block uppercase tracking-widest">Postcode *</label>
+                    <input type="text" value={address.postalCode} onChange={setA('postalCode')} required className="field" placeholder="EC1A 1BB" />
+                  </div>
+                  <div>
+                    <label className="caption mb-2 block uppercase tracking-widest">State / County</label>
+                    <input type="text" value={address.stateProvince} onChange={setA('stateProvince')} className="field" placeholder="Optional" />
                   </div>
                 </div>
-                <button type="submit" className="btn-black w-full justify-between mt-4">
-                  Continue to Shipping <ChevronRight size={14} />
+                <button type="submit" className="btn-navy w-full gap-2">
+                  Continue to Payment <ChevronRight size={14} />
                 </button>
               </form>
             )}
 
-            {/* ── SHIPPING ── */}
-            {step === 'shipping' && (
-              <form onSubmit={e => { e.preventDefault(); setStep('payment') }} className="space-y-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.12em] mb-3">Shipping Method</p>
-                {[
-                  { id: 'standard', label: 'Standard Delivery', detail: '5–7 business days', price: subtotal > 36 ? 'Free' : '₹99' },
-                  { id: 'express',  label: 'Express Delivery',  detail: '2–3 business days', price: '₹199' },
-                ].map(opt => (
-                  <label
-                    key={opt.id}
-                    className={`flex items-center justify-between gap-4 p-4 border-2 cursor-pointer transition-colors ${
-                      form.shipping === opt.id ? 'border-black' : 'border-gray-100 hover:border-gray-300'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <input type="radio" name="shipping" value={opt.id} checked={form.shipping === opt.id} onChange={set('shipping')} className="accent-black" />
-                      <div>
-                        <p className="text-sm font-semibold">{opt.label}</p>
-                        <p className="text-xs text-gray-400">{opt.detail}</p>
-                      </div>
-                    </div>
-                    <span className="text-sm font-bold">{opt.price}</span>
-                  </label>
-                ))}
-                <div className="flex gap-3 mt-4">
-                  <button type="button" onClick={() => setStep('information')} className="btn-outline">Back</button>
-                  <button type="submit" className="btn-black flex-1 justify-between">
-                    Continue to Payment <ChevronRight size={14} />
-                  </button>
-                </div>
-              </form>
-            )}
-
-            {/* ── PAYMENT ── */}
+            {/* Payment step */}
             {step === 'payment' && (
-              <form onSubmit={handlePlaceOrder} className="space-y-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.12em] mb-3">Payment Details</p>
-                <input placeholder="Card number" required maxLength={19} value={form.card} onChange={set('card')} className="field font-mono tracking-widest" />
-                <input placeholder="Name on card" required value={form.name} onChange={set('name')} className="field" />
-                <div className="grid grid-cols-2 gap-3">
-                  <input placeholder="MM / YY" required maxLength={7} value={form.expiry} onChange={set('expiry')} className="field font-mono" />
-                  <input placeholder="CVV" required maxLength={4} value={form.cvv} onChange={set('cvv')} className="field font-mono" />
-                </div>
-                <div className="flex gap-3 mt-4">
-                  <button type="button" onClick={() => setStep('shipping')} className="btn-outline" disabled={submitting}>
-                    Back
-                  </button>
-                  <button type="submit" disabled={submitting} className="btn-black flex-1 justify-between gap-2">
-                    {submitting
-                      ? <><Loader2 size={14} className="animate-spin" /> Placing order…</>
-                      : <><Lock size={13} /> Pay ₹{total.toLocaleString('en-IN')} <ChevronRight size={14} /></>
-                    }
+              <form onSubmit={handlePlaceOrder} className="space-y-6">
+                <div className="flex items-center gap-4 mb-6">
+                  <button type="button" onClick={() => setStep('address')} className="caption hover:text-gold transition-colors">
+                    ← Edit delivery
                   </button>
                 </div>
+                <div>
+                  <p className="eyebrow mb-2">02</p>
+                  <h2 className="display-md text-navy mb-6">Payment</h2>
+                </div>
+
+                {error && (
+                  <div className="bg-red-50 border border-red-200 text-red-600 text-xs p-4">{error}</div>
+                )}
+
+                {/* Delivery summary */}
+                <div className="bg-cream border border-mist p-5">
+                  <p className="eyebrow mb-2 text-[9px]">Delivering to</p>
+                  <p className="text-sm font-medium text-navy">{address.fullName}</p>
+                  <p className="text-xs text-stone">{address.line1}{address.line2 ? `, ${address.line2}` : ''}, {address.city}, {address.postalCode}</p>
+                </div>
+
+                {/* Payment method */}
+                <div>
+                  <p className="eyebrow mb-4">Payment Method</p>
+                  <div className="space-y-3">
+                    {[
+                      { id: 'COD', label: 'Cash on Delivery', desc: 'Pay when your order arrives' },
+                      { id: 'STRIPE', label: 'Credit / Debit Card', desc: 'Visa, Mastercard, Amex — via Stripe' },
+                      { id: 'PAYPAL', label: 'PayPal', desc: 'Pay with your PayPal account' },
+                    ].map(m => (
+                      <label key={m.id} className={`flex items-start gap-4 p-4 border cursor-pointer transition-colors ${
+                        payment.method === m.id ? 'border-gold bg-gold/5' : 'border-mist hover:border-stone'
+                      }`}>
+                        <input type="radio" name="method" value={m.id}
+                          checked={payment.method === m.id}
+                          onChange={() => setPayment({ method: m.id })}
+                          className="mt-0.5 accent-gold" />
+                        <div>
+                          <p className="text-sm font-medium text-navy">{m.label}</p>
+                          <p className="text-xs text-stone">{m.desc}</p>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <button type="submit" disabled={loading} className="btn-gold w-full gap-2">
+                  {loading && <Loader2 size={15} className="animate-spin" />}
+                  {loading ? 'Placing order…' : `Place Order · $${(total + tax).toFixed(2)}`}
+                </button>
+                <p className="text-[10px] text-stone text-center">
+                  By placing your order you agree to ASTRIMI's Terms of Service and Privacy Policy.
+                </p>
               </form>
             )}
           </div>
 
-          {/* ── ORDER SUMMARY ── */}
-          <div className="border border-gray-100 p-6 space-y-5 lg:sticky lg:top-24">
-            <h2 className="text-xs font-semibold uppercase tracking-[0.14em]">Your Order</h2>
-
-            <div className="space-y-4 max-h-56 overflow-y-auto">
+          {/* Order summary */}
+          <div className="lg:sticky lg:top-24 bg-cream border border-mist p-6">
+            <h3 className="eyebrow mb-5">Your Selection</h3>
+            <div className="space-y-4 mb-6">
               {items.map(item => (
-                <div key={`${item.product.id}-${item.variantId}`} className="flex items-center gap-3">
-                  <div className="relative w-14 h-[70px] bg-gray-50 overflow-hidden shrink-0">
-                    <img src={item.product.mainImageUrl ?? 'https://placehold.co/56x70?text=—'} alt={item.product.name} className="w-full h-full object-cover" />
-                    <span className="absolute -top-1 -right-1 bg-black text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
-                      {item.qty}
-                    </span>
-                  </div>
+                <div key={`${item.variantId}-${item.size}`} className="flex gap-3">
+                  <img src={item.imageUrl ?? PLACEHOLDER} alt={item.productName}
+                    className="w-14 h-16 object-cover bg-pearl shrink-0"
+                    onError={e => { (e.target as HTMLImageElement).src = PLACEHOLDER }} />
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium leading-snug line-clamp-2">{item.product.name}</p>
-                    {item.size && <p className="text-[10px] text-gray-400 mt-0.5">{item.size}</p>}
+                    <p className="text-xs font-medium text-navy leading-snug line-clamp-2">{item.productName}</p>
+                    <p className="caption mt-0.5">
+                      {[item.size, item.color].filter(Boolean).join(' · ')}
+                    </p>
+                    <p className="text-xs text-navy mt-1">${item.unitPrice.toFixed(2)} × {item.qty}</p>
                   </div>
-                  <span className="text-xs font-semibold shrink-0">$ {(item.product.price * item.qty).toFixed(0)}</span>
+                  <p className="text-xs font-medium text-navy shrink-0">
+                    ${(item.unitPrice * item.qty).toFixed(2)}
+                  </p>
                 </div>
               ))}
             </div>
 
-            <div className="border-t border-gray-100 pt-4" />
+            <div className="divider mb-4" />
 
-            {/* Coupon */}
-            <div className="flex gap-2">
-              <input
-                placeholder="Coupon code"
-                className="field text-xs py-2"
-                value={form.coupon}
-                onChange={set('coupon')}
-              />
-              <button type="button" className="btn-outline btn-sm shrink-0">Apply</button>
-            </div>
-
-            <div className="border-t border-gray-100 pt-4" />
-
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between text-gray-500">
-                <span>Subtotal</span>
-                <span>$ {subtotal.toFixed(2)}</span>
+            <div className="space-y-2 text-xs mb-4">
+              <div className="flex justify-between text-stone">
+                <span>Subtotal</span><span>${subtotal.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between text-gray-500">
+              <div className="flex justify-between text-stone">
                 <span>Shipping</span>
-                <span>{shippingCost === 0 ? 'Free' : `₹${shippingCost}`}</span>
+                <span>{shipping === 0 ? <span className="text-gold">Free</span> : `$${shipping.toFixed(2)}`}</span>
               </div>
-              <div className="border-t border-gray-100 pt-2" />
-              <div className="flex justify-between font-bold text-base">
-                <span>Total</span>
-                <span>$ {total.toFixed(2)}</span>
+              <div className="flex justify-between text-stone">
+                <span>Tax (est.)</span><span>${tax.toFixed(2)}</span>
               </div>
             </div>
+            <div className="divider mb-4" />
+            <div className="flex justify-between font-medium text-navy">
+              <span>Total</span><span>${(total + tax).toFixed(2)}</span>
+            </div>
+            {shipping > 0 && (
+              <p className="text-[10px] text-stone mt-3">
+                Free shipping on orders over $150
+              </p>
+            )}
           </div>
-
         </div>
       </div>
     </main>

@@ -9,4 +9,14 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  server: {
+    proxy: {
+      // Local dev: proxy /api → backend
+      '/api': {
+        target: 'https://clothing-amriah.onrender.com',
+        changeOrigin: true,
+        secure: true,
+      },
+    },
+  },
 })

@@ -1,81 +1,161 @@
-@import url('https://fonts.googleapis.com/css2?family=Anton&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=DM+Mono:wght@400;500&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* ─── ASTRIMI Design System ─────────────────────────────────────────────── */
+
 @layer base {
-  *, *::before, *::after { box-sizing: border-box; }
-  html { scroll-behavior: smooth; font-size: 16px; }
+  :root {
+    --navy:      #0A0E1A;
+    --ink:       #1A1F2E;
+    --gold:      #C9A84C;
+    --gold-l:    #E8C97A;
+    --cream:     #F5F0E8;
+    --pearl:     #FAF8F4;
+    --mist:      #E8E2D8;
+    --stone:     #9B9488;
+  }
+
+  html { scroll-behavior: smooth; }
+
   body {
-    font-family: 'DM Sans', 'Inter', system-ui, sans-serif;
-    @apply bg-white text-black antialiased;
-    font-feature-settings: "ss01", "cv02";
-    -webkit-font-smoothing: antialiased;
+    @apply bg-pearl text-navy font-body antialiased;
+    font-feature-settings: "liga" 1, "kern" 1;
   }
+
+  ::selection {
+    background: var(--gold);
+    color: var(--navy);
+  }
+
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'DM Sans', system-ui, sans-serif;
-    @apply font-bold tracking-tight;
+    @apply font-display;
+    font-feature-settings: "liga" 1;
   }
-  /* Display headlines use Anton */
-  .font-display { font-family: 'Anton', 'Bebas Neue', 'Impact', sans-serif; }
-  input, select, textarea, button { font-family: inherit; }
-  a { color: inherit; text-decoration: none; }
-  img { display: block; max-width: 100%; }
+
+  /* Smooth scrollbar */
+  * { scrollbar-width: thin; scrollbar-color: var(--mist) transparent; }
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--mist); border-radius: 2px; }
 }
 
 @layer components {
+
+  /* ── Typography ── */
+  .display {
+    @apply font-display tracking-tight;
+  }
+  .display-hero {
+    @apply font-display text-6xl sm:text-7xl md:text-8xl leading-none tracking-tight;
+  }
+  .display-xl {
+    @apply font-display text-5xl sm:text-6xl leading-none tracking-tight;
+  }
+  .display-lg {
+    @apply font-display text-4xl sm:text-5xl leading-none;
+  }
+  .display-md {
+    @apply font-display text-3xl sm:text-4xl leading-tight;
+  }
+  .eyebrow {
+    @apply text-xs font-body font-medium tracking-widest2 uppercase text-stone;
+  }
+  .caption {
+    @apply text-xs font-body text-stone tracking-wide;
+  }
+  .italic-quote {
+    @apply font-display italic font-light text-lg sm:text-xl leading-relaxed text-stone;
+  }
+
   /* ── Buttons ── */
   .btn {
-    @apply inline-flex items-center justify-center gap-2
-           text-xs font-semibold tracking-[0.1em] uppercase
-           transition-all duration-150 cursor-pointer select-none
-           border px-6 py-3;
+    @apply inline-flex items-center justify-center gap-2 font-body text-xs font-medium tracking-widest uppercase transition-all duration-300 cursor-pointer select-none;
   }
-  .btn-black {
-    @apply btn bg-black text-white border-black
-           hover:bg-gray-800 active:scale-[0.98];
+  .btn-gold {
+    @apply btn px-8 py-4 bg-gold text-navy hover:bg-gold-light;
   }
-  .btn-outline {
-    @apply btn bg-white text-black border-black
-           hover:bg-black hover:text-white active:scale-[0.98];
+  .btn-navy {
+    @apply btn px-8 py-4 bg-navy text-pearl hover:bg-ink;
+  }
+  .btn-outline-gold {
+    @apply btn px-8 py-4 border border-gold text-gold hover:bg-gold hover:text-navy;
+  }
+  .btn-outline-cream {
+    @apply btn px-8 py-4 border border-cream text-cream hover:bg-cream hover:text-navy;
+  }
+  .btn-ghost {
+    @apply btn px-6 py-3 text-navy hover:text-gold transition-colors;
   }
   .btn-sm {
-    @apply text-2xs px-4 py-2;
+    @apply px-5 py-2.5 text-[10px];
   }
 
   /* ── Inputs ── */
   .field {
-    @apply w-full px-4 py-3 text-sm border border-gray-200 bg-white
-           placeholder-gray-400 focus:outline-none focus:border-black
-           transition-colors duration-150;
+    @apply w-full border border-mist bg-transparent px-4 py-3 text-sm text-navy placeholder-stone
+           focus:outline-none focus:border-gold transition-colors duration-200;
+  }
+  .field-dark {
+    @apply w-full border border-white/20 bg-transparent px-4 py-3 text-sm text-pearl placeholder-stone
+           focus:outline-none focus:border-gold transition-colors duration-200;
   }
 
-  /* ── Product image container ── */
-  .product-img {
-    @apply overflow-hidden bg-gray-50 aspect-[3/4] w-full;
+  /* ── Gold divider ── */
+  .divider-gold {
+    @apply w-16 h-px bg-gold;
+  }
+  .divider {
+    @apply w-full h-px bg-mist;
   }
 
-  /* ── Section label (small uppercase) ── */
-  .eyebrow {
-    @apply text-2xs font-semibold tracking-[0.2em] uppercase text-gray-500;
+  /* ── Badge ── */
+  .badge {
+    @apply inline-block text-[9px] font-medium tracking-widest2 uppercase px-2 py-0.5;
+  }
+  .badge-gold     { @apply badge bg-gold/10 text-gold border border-gold/30; }
+  .badge-navy     { @apply badge bg-navy text-pearl; }
+  .badge-cream    { @apply badge bg-cream text-navy border border-mist; }
+  .badge-custom   { @apply badge bg-blush/10 text-blush border border-blush/30; }
+  .badge-preorder { @apply badge bg-ink text-gold-light border border-gold/20; }
+
+  /* ── Cards ── */
+  .card-product {
+    @apply relative bg-pearl overflow-hidden cursor-pointer;
   }
 
-  /* ── Divider ── */
-  .rule { @apply border-t border-gray-200; }
+  /* ── Section wrappers ── */
+  .section {
+    @apply py-20 sm:py-28;
+  }
+  .section-dark {
+    @apply bg-navy text-pearl;
+  }
+  .section-cream {
+    @apply bg-cream;
+  }
+  .container-astrimi {
+    @apply max-w-content mx-auto px-6 lg:px-10;
+  }
+
+  /* ── Luxury overlay ── */
+  .overlay-gradient {
+    background: linear-gradient(to top, rgba(10,14,26,0.8) 0%, rgba(10,14,26,0.2) 50%, transparent 100%);
+  }
+
+  /* ── Gold shimmer for loading ── */
+  .shimmer {
+    background: linear-gradient(90deg, var(--mist) 25%, var(--pearl) 50%, var(--mist) 75%);
+    background-size: 200% 100%;
+    @apply animate-shimmer;
+  }
 }
 
 @layer utilities {
+  .text-balance { text-wrap: balance; }
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
   .scrollbar-hide::-webkit-scrollbar { display: none; }
-  .text-balance { text-wrap: balance; }
-
-  /* Brutalist headline helper */
-  .headline {
-    font-family: 'Anton', 'Impact', sans-serif;
-    @apply uppercase leading-none tracking-tight;
-  }
 }
