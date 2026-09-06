@@ -38,19 +38,13 @@ export default function Navbar() {
 
   return (
     <>
-      {/* Top marquee — brand message */}
-      <div className="bg-navy text-gold text-[10px] tracking-widest2 uppercase text-center py-2 overflow-hidden">
-        <span className="inline-block whitespace-nowrap">
-          ✦ Rare by Design. Beyond Ordinary. &nbsp;·&nbsp; Shine Your Own Light. &nbsp;·&nbsp; Custom Made in India &nbsp;·&nbsp; ✦
-        </span>
-      </div>
-
       {/* Main navbar */}
       <header className={`sticky top-0 z-50 transition-all duration-500 ${
         scrolled ? 'bg-pearl/95 backdrop-blur-md shadow-sm border-b border-mist' : 'bg-pearl border-b border-mist'
       }`}>
         <div className="container-astrimi">
-          <div className="flex items-center justify-between h-16 sm:h-20">
+          {/* 3-column grid: left-nav | logo | right-nav+icons */}
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center h-16 sm:h-20 gap-4">
 
             {/* Left nav — desktop */}
             <nav className="hidden lg:flex items-center gap-8">
@@ -69,38 +63,35 @@ export default function Navbar() {
               ))}
             </nav>
 
-            {/* Logo — center */}
-            <Link
-              to="/"
-              className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center group"
-            >
-              <span className="font-display text-2xl sm:text-3xl font-light tracking-[0.2em] text-navy group-hover:text-gold transition-colors duration-300">
+            {/* Logo — center column */}
+            <Link to="/" className="flex flex-col items-center group">
+              <span className="font-display text-2xl sm:text-3xl font-light tracking-[0.2em] text-navy group-hover:text-gold transition-colors duration-300 whitespace-nowrap">
                 ASTRIMI
               </span>
-              <span className="text-[7px] tracking-widest2 text-stone font-body uppercase -mt-0.5 hidden sm:block">
+              <span className="text-[7px] tracking-widest2 text-stone font-body uppercase -mt-0.5 hidden sm:block whitespace-nowrap">
                 Shine Your Own Light
               </span>
             </Link>
 
-            {/* Right nav — desktop */}
-            <nav className="hidden lg:flex items-center gap-8">
-              {navLinks.slice(2).map(l => (
-                <NavLink
-                  key={l.to}
-                  to={l.to}
-                  className={({ isActive }) =>
-                    `text-xs tracking-widest uppercase font-medium transition-colors duration-200 ${
-                      isActive ? 'text-gold' : 'text-navy hover:text-gold'
-                    }`
-                  }
-                >
-                  {l.label}
-                </NavLink>
-              ))}
-            </nav>
+            {/* Right nav + icons */}
+            <div className="flex items-center justify-end gap-5 lg:gap-8">
+              {/* Right nav links — desktop */}
+              <nav className="hidden lg:flex items-center gap-8">
+                {navLinks.slice(2).map(l => (
+                  <NavLink
+                    key={l.to}
+                    to={l.to}
+                    className={({ isActive }) =>
+                      `text-xs tracking-widest uppercase font-medium transition-colors duration-200 ${
+                        isActive ? 'text-gold' : 'text-navy hover:text-gold'
+                      }`
+                    }
+                  >
+                    {l.label}
+                  </NavLink>
+                ))}
+              </nav>
 
-            {/* Icon cluster */}
-            <div className="flex items-center gap-3 sm:gap-5 ml-auto lg:ml-0">
               {/* Search */}
               <button
                 onClick={() => setSearchOpen(v => !v)}
@@ -164,7 +155,7 @@ export default function Navbar() {
                 )}
               </button>
 
-              {/* Mobile menu */}
+              {/* Mobile menu button */}
               <button
                 onClick={() => setMenuOpen(v => !v)}
                 className="lg:hidden text-navy hover:text-gold transition-colors"
