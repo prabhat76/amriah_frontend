@@ -1,114 +1,55 @@
-import { useEffect, useState } from 'react'
+import 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight, Sparkles, ChevronRight, ChevronLeft } from 'lucide-react'
-import { productsApi, bannerApi, ProductSummary, BannerResponse } from '@/lib/api'
+import { ArrowRight, Sparkles, ChevronRight } from 'lucide-react'
+import { products as localProducts } from '@/data/products'
 import ProductCard from '@/components/ProductCard'
+import { ProductSummary } from '@/lib/api'
 
 const TEXTILE_IMAGE = 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=800&q=80'
 const SARI_IMAGE = 'https://images.unsplash.com/photo-1585487000160-6ebcfceb0d03?w=800&q=80'
 
+// Convert local Product to ProductSummary shape for ProductCard
+function toSummary(p: typeof localProducts[0]): ProductSummary {
+  return {
+    id: String(p.id),
+    name: p.name,
+    slug: p.name.toLowerCase().replace(/\s+/g, '-'),
+    sku: `ASTRIMI-${p.id}`,
+    shortDescription: p.description,
+    mainImageUrl: p.image,
+    price: p.price,
+    compareAtPrice: p.originalPrice ?? null,
+    averageRating: p.rating,
+    reviewCount: p.reviewCount,
+    featured: true,
+    newArrival: p.badge === 'new',
+    categoryId: String(p.id),
+    categoryName: p.category,
+    brandId: null,
+    brandName: 'ASTRIMI',
+    minVariantPrice: p.price,
+  }
+}
+
 export default function HomePage() {
-  const [featured, setFeatured] = useState<ProductSummary[]>([])
-  const [loadingFeatured, setLoadingFeatured] = useState(true)
-  const [banners, setBanners] = useState<BannerResponse[]>([])
-  const [bannerIdx, setBannerIdx] = useState(0)
-
-  useEffect(() => {
-    productsApi.featured(0, 8)
-      .then(res => setFeatured(res.content))
-      .catch(() => {})
-      .finally(() => setLoadingFeatured(false))
-    bannerApi.list()
-      .then(setBanners)
-      .catch(() => {})
-  }, [])
-
-  // Auto-advance banner carousel
-  useEffect(() => {
-    if (banners.length < 2) return
-    const t = setInterval(() => setBannerIdx(i => (i + 1) % banners.length), 5000)
-    return () => clearInterval(t)
-  }, [banners.length])
-
-  const activeBanner = banners[bannerIdx]
+  const featured = localProducts.slice(0, 8).map(toSummary)
 
   return (
     <main className="bg-pearl">
 
       {/* ═══════════════════════════════════════════════════════
-          HERO — API Banner carousel (or static fallback)
+          HERO — Static ASTRIMI banner
       ═══════════════════════════════════════════════════════ */}
-      {activeBanner ? (
-        <section className="relative min-h-[80vh] sm:min-h-screen overflow-hidden">
-          {/* Background image */}
+      <section className="relative w-full overflow-hidden">
+        <Link to="/shop">
           <img
-            src={activeBanner.imageUrl}
-            alt={activeBanner.title ?? 'Banner'}
-            className="absolute inset-0 w-full h-full object-cover object-center transition-opacity duration-700"
+            src="/astrimi-banner.jpg"
+            alt="ASTRIMI — Inspired by Jaipur. Designed for You."
+            className="w-full h-auto block cursor-pointer hover:opacity-95 transition-opacity"
+            style={{ maxHeight: '95vh', objectFit: 'cover', objectPosition: 'center' }}
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-navy/80 via-navy/40 to-transparent" />
-
-          {/* Content */}
-          <div className="relative z-10 flex flex-col justify-center px-8 sm:px-16 lg:px-24 py-24 min-h-[80vh]">
-            {activeBanner.title && (
-              <h1 className="font-display text-pearl leading-[0.9] mb-4 animate-fade-up"
-                  style={{ fontSize: 'clamp(2.8rem, 7vw, 6rem)' }}>
-                {activeBanner.title}
-              </h1>
-            )}
-            {activeBanner.subtitle && (
-              <p className="text-sm text-stone leading-relaxed max-w-sm mb-8">{activeBanner.subtitle}</p>
-            )}
-            {activeBanner.ctaText && activeBanner.ctaLink && (
-              <Link to={activeBanner.ctaLink} className="btn-gold w-fit">
-                {activeBanner.ctaText}
-              </Link>
-            )}
-          </div>
-
-          {/* Carousel controls */}
-          {banners.length > 1 && (
-            <>
-              <button
-                onClick={() => setBannerIdx(i => (i - 1 + banners.length) % banners.length)}
-                className="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 bg-white/20 hover:bg-white/40 flex items-center justify-center text-white transition-colors"
-                aria-label="Previous"
-              >
-                <ChevronLeft size={20} />
-              </button>
-              <button
-                onClick={() => setBannerIdx(i => (i + 1) % banners.length)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 bg-white/20 hover:bg-white/40 flex items-center justify-center text-white transition-colors"
-                aria-label="Next"
-              >
-                <ChevronRight size={20} />
-              </button>
-              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex gap-2">
-                {banners.map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setBannerIdx(i)}
-                    className={`w-2 h-2 rounded-full transition-colors ${i === bannerIdx ? 'bg-gold' : 'bg-white/40'}`}
-                    aria-label={`Go to slide ${i + 1}`}
-                  />
-                ))}
-              </div>
-            </>
-          )}
-        </section>
-      ) : (
-        /* Static fallback hero — uses actual ASTRIMI brand banner */
-        <section className="relative w-full overflow-hidden">
-          <Link to="/shop">
-            <img
-              src="/astrimi-banner.jpg"
-              alt="ASTRIMI — Inspired by Jaipur. Designed for You."
-              className="w-full h-auto block cursor-pointer hover:opacity-95 transition-opacity"
-              style={{ maxHeight: '95vh', objectFit: 'cover', objectPosition: 'center' }}
-            />
-          </Link>
-        </section>
-      )}
+        </Link>
+      </section>
 
       {/* ═══════════════════════════════════════════════════════
           BRAND PHILOSOPHY — 3 values
@@ -146,33 +87,11 @@ export default function HomePage() {
             </Link>
           </div>
 
-          {loadingFeatured ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="aspect-[3/4] shimmer" />
-              ))}
-            </div>
-          ) : featured.length > 0 ? (
+          {featured.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5 gap-y-10">
               {featured.map(p => <ProductCard key={p.id} product={p} />)}
             </div>
-          ) : (
-            // Placeholder when backend returns empty
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5 gap-y-10">
-              {PLACEHOLDER_PRODUCTS.map((p, i) => (
-                <div key={i} className="card-product">
-                  <div className="aspect-[3/4] bg-cream overflow-hidden">
-                    <img src={p.img} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
-                  </div>
-                  <div className="pt-3">
-                    <p className="eyebrow text-[9px] mb-1">{p.cat}</p>
-                    <h3 className="text-sm font-medium text-navy">{p.name}</h3>
-                    <p className="text-sm text-navy mt-1">${p.price}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          ) : null}
 
           <div className="text-center mt-12 sm:hidden">
             <Link to="/shop" className="btn-outline-gold btn-sm">View All Pieces</Link>
@@ -389,15 +308,3 @@ export default function HomePage() {
     </main>
   )
 }
-
-// Placeholder products when backend is empty
-const PLACEHOLDER_PRODUCTS = [
-  { name: 'Silk Embroidered Kurta', cat: 'Custom Made', price: '280', img: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=600&q=80' },
-  { name: 'Banarasi Silk Saree', cat: 'Ready to Buy', price: '420', img: 'https://images.unsplash.com/photo-1585487000160-6ebcfceb0d03?w=600&q=80' },
-  { name: 'Chanderi Co-ord Set', cat: 'Pre-Order', price: '350', img: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80' },
-  { name: 'Zardozi Lehenga', cat: 'Bespoke', price: '890', img: 'https://images.unsplash.com/photo-1519851856928-ba6e3f81b26b?w=600&q=80' },
-  { name: 'Linen Anarkali', cat: 'Custom Made', price: '320', img: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=600&q=80' },
-  { name: 'Kantha Work Tunic', cat: 'Ready to Buy', price: '195', img: 'https://images.unsplash.com/photo-1585487000160-6ebcfceb0d03?w=600&q=80' },
-  { name: 'Ikat Print Dress', cat: 'Pre-Order', price: '240', img: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80' },
-  { name: 'Velvet Blazer', cat: 'Custom Made', price: '480', img: 'https://images.unsplash.com/photo-1519851856928-ba6e3f81b26b?w=600&q=80' },
-]
