@@ -4,7 +4,6 @@ import { ArrowRight, Sparkles, ChevronRight, ChevronLeft } from 'lucide-react'
 import { productsApi, bannerApi, ProductSummary, BannerResponse } from '@/lib/api'
 import ProductCard from '@/components/ProductCard'
 
-const HERO_IMAGE = 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1200&q=85'
 const TEXTILE_IMAGE = 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=800&q=80'
 const SARI_IMAGE = 'https://images.unsplash.com/photo-1585487000160-6ebcfceb0d03?w=800&q=80'
 
@@ -98,34 +97,22 @@ export default function HomePage() {
           )}
         </section>
       ) : (
-        /* Static fallback hero */
-        <section className="relative min-h-[90vh] sm:min-h-screen bg-navy overflow-hidden flex">
-          <div className="relative z-10 flex flex-col justify-center px-8 sm:px-16 lg:px-24 py-24 w-full lg:w-1/2">
-            <p className="eyebrow text-gold mb-6 animate-fade-in">✦ &nbsp; New Collection 2024</p>
-            <h1 className="font-display text-pearl leading-[0.9] mb-6 animate-fade-up"
-                style={{ fontSize: 'clamp(3.5rem, 8vw, 7rem)' }}>
-              Shine<br />
-              <em className="italic font-light text-gold">Your</em><br />
-              Own Light.
-            </h1>
-            <p className="text-sm text-stone leading-relaxed max-w-sm mb-10 animate-fade-up"
-               style={{ animationDelay: '0.2s' }}>
-              Rare by design. Beyond ordinary. Premium bespoke Indian textiles crafted for those who choose timeless.
-            </p>
-            <div className="flex flex-wrap gap-4 animate-fade-up" style={{ animationDelay: '0.3s' }}>
-              <Link to="/shop" className="btn-gold">Explore Collection</Link>
-              <Link to="/custom" className="btn-outline-cream">Custom Made <Sparkles size={12} /></Link>
-            </div>
-            <p className="text-[10px] tracking-widest2 text-stone/60 mt-16 uppercase">
-              Crafted in India · Delivered Worldwide
-            </p>
-          </div>
-          <div className="hidden lg:block absolute right-0 top-0 w-1/2 h-full">
-            <img src={HERO_IMAGE} alt="ASTRIMI Collection" className="w-full h-full object-cover object-top" />
-            <div className="absolute inset-0 bg-gradient-to-r from-navy via-navy/20 to-transparent" />
-          </div>
-          <div className="absolute inset-0 lg:hidden">
-            <img src={HERO_IMAGE} alt="" className="w-full h-full object-cover object-top opacity-20" />
+        /* Static fallback hero — uses actual ASTRIMI brand banner */
+        <section className="relative w-full overflow-hidden">
+          <img
+            src="/astrimi-banner.jpg"
+            alt="ASTRIMI — Inspired by Jaipur. Designed for You."
+            className="w-full h-auto block"
+            style={{ maxHeight: '95vh', objectFit: 'cover', objectPosition: 'center' }}
+          />
+          {/* CTA overlay at bottom-center */}
+          <div className="absolute inset-0 flex items-end justify-center pb-8 sm:pb-12">
+            <Link
+              to="/shop"
+              className="inline-flex items-center gap-3 px-8 py-3 bg-[#2a1f14]/90 text-[#e8d5a3] text-xs tracking-[0.25em] uppercase font-medium hover:bg-[#2a1f14] transition-colors"
+            >
+              Explore Collection <ArrowRight size={14} />
+            </Link>
           </div>
         </section>
       )}
