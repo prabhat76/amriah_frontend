@@ -64,13 +64,13 @@ export default function Navbar() {
             </nav>
 
             {/* Logo — center column */}
-            <Link to="/" className="flex flex-col items-center group">
-              <span className="font-display text-2xl sm:text-3xl font-light tracking-[0.2em] text-navy group-hover:text-gold transition-colors duration-300 whitespace-nowrap">
-                ASTRIMI
-              </span>
-              <span className="text-[7px] tracking-widest2 text-stone font-body uppercase -mt-0.5 hidden sm:block whitespace-nowrap">
-                Shine Your Own Light
-              </span>
+            <Link to="/" className="flex items-center justify-center group" aria-label="ASTRIMI home">
+              <img
+                src="/astrimi-logo.png"
+                alt="ASTRIMI"
+                className="h-10 sm:h-12 w-auto object-contain transition-opacity duration-300 group-hover:opacity-80"
+                style={{ filter: 'brightness(0) saturate(100%)' }}
+              />
             </Link>
 
             {/* Right nav + icons */}
