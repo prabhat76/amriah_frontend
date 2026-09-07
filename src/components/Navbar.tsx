@@ -68,8 +68,7 @@ export default function Navbar() {
               <img
                 src="/astrimi-logo.png"
                 alt="ASTRIMI"
-                className="h-10 sm:h-12 w-auto object-contain transition-opacity duration-300 group-hover:opacity-80"
-                style={{ filter: 'brightness(0) saturate(100%)' }}
+                className="h-10 sm:h-12 w-auto object-contain transition-opacity duration-300 group-hover:opacity-70"
               />
             </Link>
 

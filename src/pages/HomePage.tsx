@@ -99,21 +99,14 @@ export default function HomePage() {
       ) : (
         /* Static fallback hero — uses actual ASTRIMI brand banner */
         <section className="relative w-full overflow-hidden">
-          <img
-            src="/astrimi-banner.jpg"
-            alt="ASTRIMI — Inspired by Jaipur. Designed for You."
-            className="w-full h-auto block"
-            style={{ maxHeight: '95vh', objectFit: 'cover', objectPosition: 'center' }}
-          />
-          {/* CTA overlay at bottom-center */}
-          <div className="absolute inset-0 flex items-end justify-center pb-8 sm:pb-12">
-            <Link
-              to="/shop"
-              className="inline-flex items-center gap-3 px-8 py-3 bg-[#2a1f14]/90 text-[#e8d5a3] text-xs tracking-[0.25em] uppercase font-medium hover:bg-[#2a1f14] transition-colors"
-            >
-              Explore Collection <ArrowRight size={14} />
-            </Link>
-          </div>
+          <Link to="/shop">
+            <img
+              src="/astrimi-banner.jpg"
+              alt="ASTRIMI — Inspired by Jaipur. Designed for You."
+              className="w-full h-auto block cursor-pointer hover:opacity-95 transition-opacity"
+              style={{ maxHeight: '95vh', objectFit: 'cover', objectPosition: 'center' }}
+            />
+          </Link>
         </section>
       )}
 
