@@ -517,12 +517,30 @@ function OrdersTab() {
                     {new Date(o.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
                   </td>
                   <td className="py-3 text-right">
-                    <button
-                      onClick={() => setUpdating(o)}
-                      className="text-xs px-2 py-1 border border-stone/30 hover:border-navy text-stone/70 hover:text-navy transition-colors"
-                    >
-                      Update
-                    </button>
+                    <div className="flex items-center gap-1 justify-end">
+                      <button
+                        onClick={() => setUpdating(o)}
+                        className="text-xs px-2 py-1 border border-stone/30 hover:border-navy text-stone/70 hover:text-navy transition-colors"
+                      >
+                        Update
+                      </button>
+                      {o.status !== 'CANCELLED' && o.status !== 'DELIVERED' && (
+                        <button
+                          onClick={async () => {
+                            if (!confirm(`Cancel order ${o.orderNumber}?`)) return
+                            try {
+                              await adminOrdersApi.cancel(o.orderNumber)
+                              load()
+                            } catch (e) {
+                              alert(e instanceof ApiError ? e.message : 'Failed')
+                            }
+                          }}
+                          className="text-xs px-2 py-1 border border-red-200 hover:bg-red-50 text-red-500 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
