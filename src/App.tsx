@@ -16,6 +16,7 @@ import OrderDetailPage from '@/pages/OrderDetailPage'
 import CustomPage from '@/pages/CustomPage'
 import StoryPage from '@/pages/StoryPage'
 import AdminPage from '@/pages/AdminPage'
+import ChatWidget from '@/components/ChatWidget'
 
 export default function App() {
   return (
@@ -53,6 +54,7 @@ export default function App() {
                 </Routes>
               </div>
               <Footer />
+              <ChatWidget />
             </div>
           } />
         </Routes>

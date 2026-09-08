@@ -493,6 +493,9 @@ export const adminOrdersApi = {
 
   updateStatus: (orderNumber: string, body: { status: string; trackingNumber?: string; shippingCarrier?: string }) =>
     request<OrderResponse>('PATCH', `/admin/orders/${orderNumber}/status`, body),
+
+  cancel: (orderNumber: string) =>
+    post<OrderResponse>(`/admin/orders/${orderNumber}/status`, { status: 'CANCELLED' }),
 }
 
 // ─── Admin Products API ───────────────────────────────────────────────────────
