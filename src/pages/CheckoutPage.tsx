@@ -2,7 +2,7 @@ import { useState, FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { Lock, CheckCircle2, Loader2, ChevronRight } from 'lucide-react'
 import { useCart } from '@/context/CartContext'
-import { addressApi, ordersApi, ApiError } from '@/lib/api'
+import { addressApi, cartApi, ordersApi, ApiError } from '@/lib/api'
 
 type Step = 'address' | 'payment'
 const PLACEHOLDER = 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=100&q=70'
@@ -36,7 +36,7 @@ export default function CheckoutPage() {
     e.preventDefault()
     setLoading(true); setError(null)
     try {
-      // Create address first
+      // 1. Create/update address
       const addr = await addressApi.create({
         fullName: address.fullName,
         phone: address.phone,
@@ -47,7 +47,16 @@ export default function CheckoutPage() {
         postalCode: address.postalCode,
         country: address.country,
       })
-      // Place order
+
+      // 2. Sync local cart items to server cart (backend requires server-side cart for checkout)
+      await cartApi.clear().catch(() => {}) // clear stale server cart first
+      for (const item of items) {
+        // For local items without a real variant ID, use productId as fallback
+        const variantId = item.variantId.endsWith('-default') ? item.productId : item.variantId
+        await cartApi.addItem(variantId, item.qty).catch(() => {})
+      }
+
+      // 3. Place order
       const order = await ordersApi.checkout({
         shippingAddressId: addr.id,
         paymentMethod: payment.method,
