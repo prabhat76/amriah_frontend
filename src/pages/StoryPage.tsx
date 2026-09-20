@@ -14,7 +14,7 @@ export default function StoryPage() {
             <em className="italic font-light text-gold">Own Light.</em>
           </h1>
           <p className="text-sm text-stone max-w-md mx-auto leading-relaxed">
-            ASTRIMI is more than textile and more than a fashion label. It is a world of light, craftsmanship, individuality and timeless design.
+            ASTRIMI is more than textile and more than a fashion label. Inspired by the idea of a star — a little light, a radiant presence and a guiding glow.
           </p>
         </div>
       </section>
@@ -29,7 +29,7 @@ export default function StoryPage() {
               <em className="italic font-light text-gold">Born Rare.</em>
             </h2>
             <p className="text-sm text-stone leading-relaxed mb-5">
-              ASTRIMI draws its soul from the idea of a star — a little light, a radiant presence, a guiding glow. The brand represents individuality, confidence, beauty and inner light.
+              ASTRIMI represents individuality, confidence, beauty and inner light. Inspired by the idea of a star — a little light, a radiant presence and a guiding glow.
             </p>
             <p className="text-sm text-stone leading-relaxed mb-8">
               We combine the richness of traditional Indian textiles, skilled craftsmanship and contemporary design to create pieces that are made to be remembered.
@@ -46,6 +46,7 @@ export default function StoryPage() {
               <p className="font-display italic text-2xl text-navy mb-4">
                 "Not for everyone.<br />For the ones who<br />glow differently."
               </p>
+              <p className="text-xs text-stone tracking-widest uppercase mt-4">Rare by Design. Beyond Ordinary.</p>
               <div className="divider-gold mx-auto" />
             </div>
           </div>
@@ -61,7 +62,7 @@ export default function StoryPage() {
             <em className="italic font-light text-gold">Craftsmanship Without Borders.</em>
           </h2>
           <p className="text-sm text-stone max-w-2xl mx-auto leading-relaxed mb-16">
-            Every ASTRIMI piece is a collaboration between traditional Indian artisans and contemporary design. Our craftsmen bring centuries of knowledge — from Banarasi weaving to Zardozi embroidery — to each commission.
+            Every ASTRIMI piece is a collaboration between traditional Indian artisans and contemporary design. Quality must remain consistent across fabric, tailoring, finishing, packaging and customer experience.
           </p>
           <div className="grid sm:grid-cols-3 gap-px bg-white/10">
             {[
@@ -91,8 +92,11 @@ export default function StoryPage() {
             "True luxury doesn't follow trends. It is felt in the quality of a fabric, seen in the precision of craftsmanship and remembered through the experience."
           </blockquote>
           <div className="divider-gold mx-auto mb-8" />
+          <p className="text-sm text-stone leading-relaxed mb-5">
+            We believe fashion should speak quietly — but leave a lasting impression. Less noise. More presence.
+          </p>
           <p className="text-sm text-stone leading-relaxed mb-10">
-            We believe fashion should speak quietly — but leave a lasting impression. Our vision is to build ASTRIMI into a globally recognised brand, connecting authentic craftsmanship with customers, designers and fashion lovers around the world.
+            Our vision is to build ASTRIMI into a globally recognised fashion and textile brand, connecting authentic craftsmanship with customers, designers and fashion lovers around the world.
           </p>
         </div>
       </section>
@@ -106,7 +110,7 @@ export default function StoryPage() {
             <em className="italic font-light text-gold">Join a world.</em>
           </h2>
           <p className="text-sm text-stone max-w-xl mx-auto leading-relaxed mb-10">
-            People buy a feeling. They buy an identity. They buy a story. ASTRIMI makes customers feel they are becoming one with the brand, not simply purchasing a product.
+            People don't only buy clothes. They buy a feeling. They buy an identity. They buy a story. ASTRIMI makes customers feel they are becoming one with the brand, not simply purchasing a product.
           </p>
           <div className="flex flex-wrap justify-center gap-3 mb-10">
             {['Individuality', 'Craftsmanship', 'Creativity', 'Timeless Style', 'Self-Expression'].map(v => (

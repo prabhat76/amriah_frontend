@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { ChevronDown, ChevronUp, Loader2, SlidersHorizontal, X } from 'lucide-react'
 import { productsApi, categoriesApi, ProductSummary, CategoryResponse } from '@/lib/api'
+import { products as localProducts, categories as localCategories } from '@/data/products'
 import ProductCard from '@/components/ProductCard'
 
 const SORT_OPTIONS = [
@@ -44,7 +45,21 @@ export default function ShopPage() {
   const [categories, setCategories] = useState<CategoryResponse[]>([])
 
   useEffect(() => {
-    categoriesApi.list().then(setCategories).catch(() => {})
+    categoriesApi.list()
+      .then(setCategories)
+      .catch(() => {
+        // Fall back to local categories if backend is unavailable
+        setCategories(localCategories.map((c, i) => ({
+          id: String(c.id),
+          name: c.name,
+          slug: c.name.toLowerCase().replace(/\s+/g, '-'),
+          description: null,
+          imageUrl: c.image,
+          parentId: null,
+          displayOrder: i,
+          active: true,
+        })))
+      })
   }, [])
 
   const fetchProducts = useCallback(async () => {
@@ -62,8 +77,37 @@ export default function ShopPage() {
       setProducts(res.content)
       setTotalElements(res.totalElements)
       setTotalPages(res.totalPages)
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Failed to load products')
+    } catch {
+      // Backend unavailable — filter local products instead
+      let filtered = localProducts.map(p => ({
+        id: String(p.id),
+        name: p.name,
+        slug: p.name.toLowerCase().replace(/\s+/g, '-'),
+        sku: `ASTRIMI-${p.id}`,
+        shortDescription: p.description,
+        mainImageUrl: p.image,
+        price: p.price,
+        compareAtPrice: p.originalPrice ?? null,
+        averageRating: p.rating,
+        reviewCount: p.reviewCount,
+        featured: true,
+        newArrival: p.badge === 'new',
+        categoryId: String(p.id),
+        categoryName: p.category,
+        brandId: null,
+        brandName: 'ASTRIMI',
+        minVariantPrice: p.price,
+      } as ProductSummary))
+      if (search) {
+        filtered = filtered.filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
+      }
+      if (maxPrice < 1000) {
+        filtered = filtered.filter(p => p.price <= maxPrice)
+      }
+      setProducts(filtered)
+      setTotalElements(filtered.length)
+      setTotalPages(1)
+      setError(null) // Don't show error — we have data
     } finally {
       setLoading(false)
     }

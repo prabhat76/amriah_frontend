@@ -44,9 +44,9 @@ export default function HomePage() {
         <Link to="/shop">
           <img
             src="/astrimi-banner.jpg"
-            alt="ASTRIMI — Inspired by Jaipur. Designed for You."
+            alt="ASTRIMI — Shine Your Own Light"
             className="w-full h-auto block cursor-pointer hover:opacity-95 transition-opacity"
-            style={{ maxHeight: '95vh', objectFit: 'cover', objectPosition: 'center' }}
+            style={{ maxHeight: '95vh', objectFit: 'cover', objectPosition: 'center top' }}
           />
         </Link>
       </section>
@@ -59,8 +59,8 @@ export default function HomePage() {
           <div className="grid md:grid-cols-3 gap-8 md:gap-16">
             {[
               { icon: '✦', title: 'Custom Made', body: 'Every piece can be created exactly to your vision. Size, colour, fabric, finish — truly yours.' },
-              { icon: '◈', title: 'Indian Textiles', body: 'We combine centuries of Indian craftsmanship with contemporary design to create pieces made to be remembered.' },
-              { icon: '◇', title: 'Rare by Design', body: 'ASTRIMI is not for everyone — it is for those who understand the value of quiet luxury and timeless elegance.' },
+              { icon: '◈', title: 'Indian Textiles', body: 'We combine the richness of traditional Indian textiles, skilled craftsmanship and contemporary design to create pieces made to be remembered.' },
+              { icon: '◇', title: 'Rare by Design', body: 'ASTRIMI is not for everyone. It is for those who understand the value of quiet luxury and timeless elegance.' },
             ].map(v => (
               <div key={v.title} className="text-center">
                 <div className="text-gold text-2xl mb-4">{v.icon}</div>
@@ -112,7 +112,7 @@ export default function HomePage() {
                 <em className="italic font-light text-gold">Made for You.</em>
               </h2>
               <p className="text-sm text-stone leading-relaxed mb-6 max-w-md">
-                ASTRIMI is a custom-made and bespoke outfit specialist. We don't believe customers should choose from what's already available.
+                ASTRIMI is a custom-made and bespoke outfit specialist. We don't believe customers should always have to choose from something already available.
               </p>
               <div className="grid grid-cols-2 gap-3 mb-8">
                 {['Size', 'Colour', 'Fabric', 'Finish', 'Design Details', 'Personal Requirements'].map(opt => (
@@ -268,7 +268,7 @@ export default function HomePage() {
           </blockquote>
           <div className="divider-gold mx-auto mb-8" />
           <p className="text-sm text-stone leading-relaxed max-w-lg mx-auto mb-10">
-            We believe fashion should speak quietly — but leave a lasting impression. Less noise. More presence. Heritage reimagined. Craftsmanship without borders.
+            We believe fashion should speak quietly — but leave a lasting impression. Less noise. More presence. Heritage reimagined. Craftsmanship without borders. Timeless by nature.
           </p>
           <Link to="/story" className="btn-outline-cream btn-sm inline-flex items-center gap-2">
             Our Story <ArrowRight size={12} />
@@ -290,7 +290,7 @@ export default function HomePage() {
             <em className="italic font-light text-gold">They buy a feeling.</em>
           </h2>
           <p className="text-sm text-stone max-w-xl mx-auto leading-relaxed mb-10">
-            Become part of a community that believes in individuality, craftsmanship, creativity, timeless style and self-expression. ASTRIMI is a world you'll want to belong to.
+            Become part of a community that believes in individuality, craftsmanship, creativity, timeless style and self-expression. Don't just buy a product — create a feeling you want to belong to.
           </p>
           <div className="flex flex-wrap justify-center gap-3 mb-12">
             {['Individuality', 'Craftsmanship', 'Creativity', 'Timeless Style', 'Self-Expression'].map(v => (
