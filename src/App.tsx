@@ -1,3 +1,4 @@
+import { useState, useCallback } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { CartProvider } from '@/context/CartContext'
 import { AuthProvider } from '@/context/AuthContext'
@@ -5,6 +6,7 @@ import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import CartSidebar from '@/components/CartSidebar'
 import ProtectedRoute from '@/components/ProtectedRoute'
+import SplashScreen from '@/components/SplashScreen'
 import HomePage from '@/pages/HomePage'
 import ShopPage from '@/pages/ShopPage'
 import ProductDetailPage from '@/pages/ProductDetailPage'
@@ -19,9 +21,13 @@ import AdminPage from '@/pages/AdminPage'
 import ChatWidget from '@/components/ChatWidget'
 
 export default function App() {
+  const [splashDone, setSplashDone] = useState(false)
+  const handleSplashDone = useCallback(() => setSplashDone(true), [])
+
   return (
     <AuthProvider>
       <CartProvider>
+        {!splashDone && <SplashScreen onDone={handleSplashDone} />}
         <Routes>
           {/* Admin — own layout, no storefront Navbar/Footer */}
           <Route path="/admin/*" element={<AdminPage />} />

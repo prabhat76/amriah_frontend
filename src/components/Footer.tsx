@@ -63,7 +63,7 @@ export default function Footer() {
               <span className="text-[9px] tracking-widest2 text-stone uppercase">Shine Your Own Light</span>
             </Link>
             <p className="text-xs text-stone leading-relaxed mb-6">
-              Bespoke Indian textiles crafted for the exceptional. Every piece is made with intention, produced with purpose.
+              Bespoke Indian textiles and custom-made pieces crafted for the exceptional. Every piece is designed with intention, produced with purpose.
             </p>
             <div className="flex gap-4">
               <a href="https://instagram.com/astrimi" target="_blank" rel="noopener noreferrer" aria-label="Instagram"
