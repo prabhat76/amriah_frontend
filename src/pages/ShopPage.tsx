@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { ChevronDown, ChevronUp, Loader2, SlidersHorizontal, X } from 'lucide-react'
 import { productsApi, categoriesApi, ProductSummary, CategoryResponse } from '@/lib/api'
@@ -12,6 +12,7 @@ const SORT_OPTIONS = [
   { label: 'Top Rated', value: 'averageRating,desc' },
 ]
 const SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '6', '8', '10', '12', '14', '16']
+const PAGE_SIZE = 12
 
 function FilterSection({ title, children }: { title: string; children: React.ReactNode }) {
   const [open, setOpen] = useState(true)
@@ -36,80 +37,75 @@ export default function ShopPage() {
   const [page, setPage] = useState(0)
   const [mobileFilters, setMobileFilters] = useState(false)
 
-  const [products, setProducts] = useState<ProductSummary[]>([])
-  const [totalElements, setTotalElements] = useState(0)
-  const [totalPages, setTotalPages] = useState(0)
+  // All products fetched once from API — filtering is client-side
+  const [allProducts, setAllProducts] = useState<ProductSummary[]>([])
+  const [categories, setCategories] = useState<CategoryResponse[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [categories, setCategories] = useState<CategoryResponse[]>([])
 
-  useEffect(() => {
-    categoriesApi.list()
-      .then(setCategories)
-      .catch(() => {
-        // Categories unavailable — filters will be hidden, products still load
-        setCategories([])
-      })
-  }, [])
+  // Use a ref to track if the initial fetch has been done
+  const fetchedRef = useRef(false)
 
-  const fetchProducts = useCallback(async () => {
+  const fetchAll = () => {
     setLoading(true)
     setError(null)
-    try {
-      // /products/search is broken on this backend — use /products list with client-side filtering
-      const res = await productsApi.list(0, 100)
-      let filtered = res.content
+    Promise.all([
+      productsApi.list(0, 100),
+      categoriesApi.list().catch(() => [] as CategoryResponse[]),
+    ])
+      .then(([res, cats]) => {
+        setAllProducts(res.content)
+        setCategories(cats)
+      })
+      .catch(() => {
+        setError('Unable to load products. Please check your connection and try again.')
+        setAllProducts([])
+      })
+      .finally(() => setLoading(false))
+  }
 
-      // Category filter: match by categoryId (API data) or categoryName (local fallback)
-      if (selectedCategory) {
-        const catName = categories.find(c => c.id === selectedCategory)?.name
-        filtered = filtered.filter(p =>
-          p.categoryId === selectedCategory ||
-          (catName && p.categoryName.toLowerCase() === catName.toLowerCase()),
-        )
-      }
+  useEffect(() => {
+    if (fetchedRef.current) return
+    fetchedRef.current = true
+    fetchAll()
+  }, [])
 
-      // Text search
-      if (search.trim()) {
-        const q = search.trim().toLowerCase()
-        filtered = filtered.filter(p =>
-          p.name.toLowerCase().includes(q) ||
-          p.categoryName.toLowerCase().includes(q) ||
-          (p.shortDescription ?? '').toLowerCase().includes(q),
-        )
-      }
+  // Client-side filtering + sorting + pagination — no extra API calls
+  const { products, totalElements, totalPages } = useMemo(() => {
+    let filtered = [...allProducts]
 
-      // Price filter
-      if (maxPrice < 1000) {
-        filtered = filtered.filter(p => p.price <= maxPrice)
-      }
-
-      // Sort
-      if (sort === 'price,asc') filtered = [...filtered].sort((a, b) => a.price - b.price)
-      else if (sort === 'price,desc') filtered = [...filtered].sort((a, b) => b.price - a.price)
-      else if (sort === 'averageRating,desc') filtered = [...filtered].sort((a, b) => b.averageRating - a.averageRating)
-      else if (sort === 'newest,desc') filtered = [...filtered].sort((a, b) => (b.newArrival ? 1 : 0) - (a.newArrival ? 1 : 0))
-
-      // Paginate client-side
-      const pageSize = 12
-      const total = filtered.length
-      const totalPgs = Math.ceil(total / pageSize) || 1
-      const sliced = filtered.slice(page * pageSize, (page + 1) * pageSize)
-
-      setProducts(sliced)
-      setTotalElements(total)
-      setTotalPages(totalPgs)
-    } catch (err) {
-      setError('Unable to load products. Please check your connection and try again.')
-      setProducts([])
-      setTotalElements(0)
-      setTotalPages(0)
-    } finally {
-      setLoading(false)
+    if (selectedCategory) {
+      const catName = categories.find(c => c.id === selectedCategory)?.name
+      filtered = filtered.filter(p =>
+        p.categoryId === selectedCategory ||
+        (catName && p.categoryName.toLowerCase() === catName.toLowerCase()),
+      )
     }
-  }, [search, selectedCategory, maxPrice, selectedSizes, page, sort, categories])
 
-  useEffect(() => { fetchProducts() }, [fetchProducts])
+    if (search.trim()) {
+      const q = search.trim().toLowerCase()
+      filtered = filtered.filter(p =>
+        p.name.toLowerCase().includes(q) ||
+        p.categoryName.toLowerCase().includes(q) ||
+        (p.shortDescription ?? '').toLowerCase().includes(q),
+      )
+    }
+
+    if (maxPrice < 1000) {
+      filtered = filtered.filter(p => p.price <= maxPrice)
+    }
+
+    if (sort === 'price,asc') filtered.sort((a, b) => a.price - b.price)
+    else if (sort === 'price,desc') filtered.sort((a, b) => b.price - a.price)
+    else if (sort === 'averageRating,desc') filtered.sort((a, b) => b.averageRating - a.averageRating)
+    else if (sort === 'newest,desc') filtered.sort((a, b) => (b.newArrival ? 1 : 0) - (a.newArrival ? 1 : 0))
+
+    const total = filtered.length
+    const totalPgs = Math.ceil(total / PAGE_SIZE) || 1
+    const sliced = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
+
+    return { products: sliced, totalElements: total, totalPages: totalPgs }
+  }, [allProducts, categories, selectedCategory, search, maxPrice, sort, page])
 
   const toggleSize = (s: string) =>
     setSelectedSizes(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])
@@ -246,7 +242,7 @@ export default function ShopPage() {
             {error && (
               <div className="py-10 text-center">
                 <p className="text-sm text-red-400 mb-4">{error}</p>
-                <button onClick={fetchProducts} className="btn-outline-gold btn-sm">Retry</button>
+                <button onClick={() => { fetchedRef.current = false; fetchAll() }} className="btn-outline-gold btn-sm">Retry</button>
               </div>
             )}
 
@@ -254,7 +250,13 @@ export default function ShopPage() {
               <div className="py-20 flex justify-center">
                 <Loader2 size={24} className="animate-spin text-gold/40" />
               </div>
-            ) : products.length === 0 ? (
+            ) : !error && products.length === 0 && allProducts.length === 0 ? (
+              <div className="py-20 text-center">
+                <p className="font-display text-2xl text-navy mb-3">No products available</p>
+                <p className="text-sm text-stone mb-2">The shop is being set up.</p>
+                <p className="text-xs text-stone/60">Products will appear here once they are added via the admin panel.</p>
+              </div>
+            ) : !error && products.length === 0 ? (
               <div className="py-20 text-center">
                 <p className="font-display text-2xl text-navy mb-3">No pieces found</p>
                 <p className="text-sm text-stone mb-6">Try adjusting your filters</p>
