@@ -598,7 +598,84 @@ export const adminOrdersApi = {
 
 // ─── Admin Products API ───────────────────────────────────────────────────────
 
+export interface ProductCreateBody {
+  name: string
+  sku: string
+  description?: string
+  shortDescription?: string
+  categoryId: string
+  brandId?: string
+  price: number
+  compareAtPrice?: number
+  costPrice?: number
+  currency?: string
+  mainImageUrl?: string
+  imageUrls?: string[]
+  tags?: string[]
+  featured?: boolean
+  newArrival?: boolean
+  weightGrams?: number
+  variants?: {
+    sku: string
+    size?: string
+    color?: string
+    colorHex?: string
+    material?: string
+    price: number
+    salePrice?: number
+    stockQuantity: number
+    lowStockThreshold?: number
+    imageUrl?: string
+    barcode?: string
+  }[]
+}
+
+export interface ProductUpdateBody {
+  name?: string
+  description?: string
+  shortDescription?: string
+  categoryId?: string
+  brandId?: string
+  price?: number
+  compareAtPrice?: number
+  costPrice?: number
+  mainImageUrl?: string
+  imageUrls?: string[]
+  tags?: string[]
+  featured?: boolean
+  newArrival?: boolean
+  active?: boolean
+  status?: 'DRAFT' | 'ACTIVE' | 'OUT_OF_STOCK' | 'DISCONTINUED' | 'ARCHIVED'
+  weightGrams?: number
+}
+
+export interface VariantCreateBody {
+  sku: string
+  size?: string
+  color?: string
+  colorHex?: string
+  material?: string
+  price: number
+  salePrice?: number
+  stockQuantity: number
+  lowStockThreshold?: number
+  imageUrl?: string
+  barcode?: string
+}
+
 export const adminProductsApi = {
+  create: (body: ProductCreateBody) =>
+    post<ProductDetail>('/products', body),
+
+  update: (productId: string, body: ProductUpdateBody) =>
+    request<ProductDetail>('PUT', `/products/${productId}`, body),
+
+  delete: (productId: string) =>
+    del<void>(`/products/${productId}`),
+
+  addVariant: (productId: string, body: VariantCreateBody) =>
+    post<ProductVariant>(`/products/${productId}/variants`, body),
+
   uploadImage: (productId: string, file: File, setAsMain = false) => {
     const form = new FormData()
     form.append('file', file)
@@ -610,6 +687,19 @@ export const adminProductsApi = {
       .then(r => r.json() as Promise<ApiResponse<unknown>>)
       .then(j => { if (!j.success) throw new ApiError(400, j.errorCode ?? 'ERROR', j.message); return j.data })
   },
+}
+
+// ─── Admin Categories API ─────────────────────────────────────────────────────
+
+export const adminCategoriesApi = {
+  create: (body: { name: string; description?: string; imageUrl?: string; parentId?: string; displayOrder?: number }) =>
+    post<CategoryResponse>('/categories', body),
+
+  update: (id: string, body: { name?: string; description?: string; imageUrl?: string; parentId?: string; displayOrder?: number; active?: boolean }) =>
+    request<CategoryResponse>('PUT', `/categories/${id}`, body),
+
+  delete: (id: string) =>
+    del<void>(`/categories/${id}`),
 }
 
 // ─── AI API ───────────────────────────────────────────────────────────────────
