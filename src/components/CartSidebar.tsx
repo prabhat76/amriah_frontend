@@ -7,7 +7,7 @@ const PLACEHOLDER = 'https://images.unsplash.com/photo-1523381210434-271e8be1f52
 export default function CartSidebar() {
   const { items, isOpen, closeCart, removeItem, updateQty, subtotal, itemCount } = useCart()
 
-  const freeShippingThreshold = 200
+  const freeShippingThreshold = 100
   const progressPct = Math.min(100, (subtotal / freeShippingThreshold) * 100)
   const remaining = Math.max(0, freeShippingThreshold - subtotal)
 

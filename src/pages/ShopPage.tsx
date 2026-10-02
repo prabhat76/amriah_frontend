@@ -66,19 +66,55 @@ export default function ShopPage() {
     setLoading(true)
     setError(null)
     try {
-      const res = await productsApi.search({
-        q: search.trim() || undefined,
-        categoryId: selectedCategory ?? undefined,
-        maxPrice: maxPrice < 1000 ? maxPrice : undefined,
-        page,
-        size: 12,
-        sort: sort !== 'featured' ? sort : undefined,
-      })
-      setProducts(res.content)
-      setTotalElements(res.totalElements)
-      setTotalPages(res.totalPages)
+      // /products/search is broken on this backend — use /products list with client-side filtering
+      const res = await productsApi.list(0, 200)
+      let filtered = res.content
+
+      // Category filter: match by categoryId (API data) or categoryName (local fallback)
+      if (selectedCategory) {
+        const catName = categories.find(c => c.id === selectedCategory)?.name
+        filtered = filtered.filter(p =>
+          p.categoryId === selectedCategory ||
+          (catName && p.categoryName.toLowerCase() === catName.toLowerCase()),
+        )
+      }
+
+      // Text search
+      if (search.trim()) {
+        const q = search.trim().toLowerCase()
+        filtered = filtered.filter(p =>
+          p.name.toLowerCase().includes(q) ||
+          p.categoryName.toLowerCase().includes(q) ||
+          (p.shortDescription ?? '').toLowerCase().includes(q),
+        )
+      }
+
+      // Price filter
+      if (maxPrice < 1000) {
+        filtered = filtered.filter(p => p.price <= maxPrice)
+      }
+
+      // Sort
+      if (sort === 'price,asc') filtered = [...filtered].sort((a, b) => a.price - b.price)
+      else if (sort === 'price,desc') filtered = [...filtered].sort((a, b) => b.price - a.price)
+      else if (sort === 'averageRating,desc') filtered = [...filtered].sort((a, b) => b.averageRating - a.averageRating)
+      else if (sort === 'newest,desc') filtered = [...filtered].sort((a, b) => (b.newArrival ? 1 : 0) - (a.newArrival ? 1 : 0))
+
+      // Paginate client-side
+      const pageSize = 12
+      const total = filtered.length
+      const totalPgs = Math.ceil(total / pageSize) || 1
+      const sliced = filtered.slice(page * pageSize, (page + 1) * pageSize)
+
+      setProducts(sliced)
+      setTotalElements(total)
+      setTotalPages(totalPgs)
     } catch {
       // Backend unavailable — filter local products instead
+      const catId = (name: string) => {
+        const match = localCategories.find(c => c.name === name)
+        return match ? String(match.id) : ''
+      }
       let filtered = localProducts.map(p => ({
         id: String(p.id),
         name: p.name,
@@ -92,26 +128,33 @@ export default function ShopPage() {
         reviewCount: p.reviewCount,
         featured: true,
         newArrival: p.badge === 'new',
-        categoryId: String(p.id),
+        // Use real category ID from local categories list
+        categoryId: catId(p.category),
         categoryName: p.category,
         brandId: null,
         brandName: 'ASTRIMI',
         minVariantPrice: p.price,
       } as ProductSummary))
-      if (search) {
-        filtered = filtered.filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
+
+      if (selectedCategory) {
+        filtered = filtered.filter(p => p.categoryId === selectedCategory)
+      }
+      if (search.trim()) {
+        const q = search.trim().toLowerCase()
+        filtered = filtered.filter(p => p.name.toLowerCase().includes(q))
       }
       if (maxPrice < 1000) {
         filtered = filtered.filter(p => p.price <= maxPrice)
       }
+
       setProducts(filtered)
       setTotalElements(filtered.length)
       setTotalPages(1)
-      setError(null) // Don't show error — we have data
+      setError(null)
     } finally {
       setLoading(false)
     }
-  }, [search, selectedCategory, maxPrice, selectedSizes, page, sort])
+  }, [search, selectedCategory, maxPrice, selectedSizes, page, sort, categories])
 
   useEffect(() => { fetchProducts() }, [fetchProducts])
 
