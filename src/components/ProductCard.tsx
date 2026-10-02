@@ -1,8 +1,6 @@
-import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Heart, Star, Sparkles, ShoppingBag, Check } from 'lucide-react'
+import { Heart, Star, Sparkles } from 'lucide-react'
 import type { ProductSummary } from '@/lib/api'
-import { useCart } from '@/context/CartContext'
 
 interface Props {
   product: ProductSummary
@@ -11,29 +9,11 @@ interface Props {
 const PLACEHOLDER = 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=600&q=80'
 
 export default function ProductCard({ product: p }: Props) {
-  const { addItem, openCart } = useCart()
-  const [added, setAdded] = useState(false)
-
   const image = p.mainImageUrl ?? PLACEHOLDER
   const hasDiscount = p.compareAtPrice != null && p.compareAtPrice > p.price
   const discountPct = hasDiscount
     ? Math.round((1 - p.price / p.compareAtPrice!) * 100)
     : 0
-
-  const handleAddToBag = (e: React.MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    addItem(
-      { id: p.id, name: p.name, mainImageUrl: p.mainImageUrl, price: p.price },
-      `${p.id}-default`,
-      '',
-      '',
-      1,
-    )
-    setAdded(true)
-    openCart()
-    setTimeout(() => setAdded(false), 2000)
-  }
 
   return (
     <Link to={`/product/${p.id}`} className="card-product block">
@@ -104,18 +84,10 @@ export default function ProductCard({ product: p }: Props) {
           )}
         </div>
 
-        {/* Add to Bag button */}
-        <button
-          onClick={handleAddToBag}
-          className={`mt-3 w-full flex items-center justify-center gap-2 py-2.5 text-xs font-medium tracking-widest uppercase transition-all duration-200 border ${
-            added
-              ? 'bg-gold text-navy border-gold'
-              : 'bg-transparent text-navy border-mist hover:bg-navy hover:text-pearl hover:border-navy'
-          }`}
-        >
-          {added ? <Check size={12} /> : <ShoppingBag size={12} />}
-          {added ? 'Added!' : 'Add to Bag'}
-        </button>
+        {/* Select options — navigate to product detail for variant selection */}
+        <div className="mt-3 w-full flex items-center justify-center py-2.5 text-xs font-medium tracking-widest uppercase border border-mist text-navy group-hover:bg-navy group-hover:text-pearl group-hover:border-navy transition-all duration-200">
+          Select Options
+        </div>
       </div>
     </Link>
   )

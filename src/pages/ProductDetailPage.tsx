@@ -61,11 +61,18 @@ export default function ProductDetailPage() {
   }
 
   const handleAdd = () => {
-    if (!selectedSize && (product?.availableSizes.length ?? 0) > 0) { setSizeError(true); return }
     if (!product) return
+    // Require a valid UUID variantId — if the product has no variants, it cannot be ordered
+    const variantId = selectedVariantId ?? product.variants.find(v => v.active)?.id ?? ''
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    if (!UUID_RE.test(variantId)) {
+      setSizeError(true)
+      return
+    }
+    if (!selectedSize && (product.availableSizes.length ?? 0) > 0) { setSizeError(true); return }
     addItem(
       { id: product.product.id, name: product.product.name, mainImageUrl: product.product.mainImageUrl, price: product.product.price },
-      selectedVariantId ?? product.variants[0]?.id ?? '',
+      variantId,
       selectedColor,
       selectedSize,
       qty,
@@ -222,10 +229,20 @@ export default function ProductDetailPage() {
                 <span className="w-10 text-center text-sm font-medium">{qty}</span>
                 <button onClick={() => setQty(qty + 1)} className="w-11 h-12 flex items-center justify-center hover:bg-cream transition-colors"><Plus size={12} /></button>
               </div>
-              <button onClick={handleAdd}
-                className={`flex-1 btn ${addedMsg ? 'bg-gold text-navy' : 'bg-navy text-pearl hover:bg-ink'} gap-2`}>
-                {addedMsg ? '✦ Added to Bag' : 'Add to Bag'}
-              </button>
+              {product.variants.some(v => v.active) ? (
+                <button onClick={handleAdd}
+                  className={`flex-1 btn ${addedMsg ? 'bg-gold text-navy' : 'bg-navy text-pearl hover:bg-ink'} gap-2`}>
+                  {addedMsg ? '✦ Added to Bag' : 'Add to Bag'}
+                </button>
+              ) : (
+                <button disabled
+                  className="flex-1 btn bg-stone/20 text-stone/60 cursor-not-allowed gap-2">
+                  Not Available to Order
+                </button>
+              )}
+              {sizeError && !product.variants.some(v => v.active) && (
+                <p className="text-xs text-red-400 mt-2">This product has no purchasable variants — contact us for a custom order.</p>
+              )}
               <button className="w-12 h-12 border border-mist flex items-center justify-center hover:border-gold hover:text-gold transition-colors">
                 <Heart size={16} />
               </button>
