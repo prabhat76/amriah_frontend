@@ -3,7 +3,7 @@
  * Base URL: https://clothing-amriah.onrender.com/api
  */
 
-const BASE = 'https://clothing-amriah.onrender.com/api'
+const BASE = import.meta.env.VITE_API_BASE ?? 'https://clothing-amriah.onrender.com/api'
 
 // ─── Token storage ────────────────────────────────────────────────────────────
 
@@ -230,6 +230,7 @@ export interface OrderResponse {
   orderNumber: string
   status: string
   paymentStatus: string
+  paymentToken: string | null
   items: OrderItemResponse[]
   shippingAddress: AddressSnapshot | null
   subtotal: number
@@ -273,22 +274,23 @@ export interface AddressSnapshot {
 
 export interface AddressResponse {
   id: string
+  label: string | null
   fullName: string
   phone: string
   line1: string
   line2: string | null
   city: string
-  stateProvince: string
+  stateProvince: string | null
   postalCode: string
   country: string
-  isDefault: boolean
+  defaultAddress: boolean
 }
 
 // ─── Auth API ─────────────────────────────────────────────────────────────────
 
 export const authApi = {
-  register: (email: string, password: string, firstName: string, lastName: string) =>
-    post<TokenResponse>('/auth/register', { email, password, firstName, lastName }, false),
+  register: (email: string, password: string, firstName: string, lastName: string, phone?: string) =>
+    post<TokenResponse>('/auth/register', { email, password, firstName, lastName, phone }, false),
 
   login: (email: string, password: string) =>
     post<TokenResponse>('/auth/login', { email, password }, false),
@@ -298,6 +300,9 @@ export const authApi = {
 
   forgotPassword: (email: string) =>
     post<void>('/auth/forgot-password', { email }, false),
+
+  resetPassword: (resetToken: string, newPassword: string) =>
+    post<void>('/auth/reset-password', { token: resetToken, newPassword }, false),
 }
 
 // ─── Products API ─────────────────────────────────────────────────────────────
@@ -369,10 +374,21 @@ export const cartApi = {
 
 // ─── Orders API ───────────────────────────────────────────────────────────────
 
+export interface OrderTrackingResponse {
+  orderNumber: string
+  status: string
+  trackingNumber: string | null
+  shippingCarrier: string | null
+  shippedAt: string | null
+  deliveredAt: string | null
+  estimatedDelivery: string | null
+}
+
 export const ordersApi = {
   checkout: (body: {
     shippingAddressId: string
-    paymentMethod: string
+    billingAddressId?: string
+    paymentMethod: 'STRIPE' | 'PAYPAL' | 'COD'
     couponCode?: string
     notes?: string
   }) => post<OrderResponse>('/orders/checkout', body),
@@ -385,23 +401,48 @@ export const ordersApi = {
 
   cancel: (orderNumber: string) =>
     post<OrderResponse>(`/orders/${orderNumber}/cancel`),
+
+  tracking: (orderNumber: string) =>
+    get<OrderTrackingResponse>(`/orders/${orderNumber}/tracking`),
 }
 
 // ─── Address API ──────────────────────────────────────────────────────────────
 
+export interface AddressBody {
+  label?: string
+  fullName: string
+  phone?: string
+  line1: string
+  line2?: string
+  city: string
+  stateProvince?: string
+  postalCode: string
+  country: string
+  defaultAddress?: boolean
+}
+
 export const addressApi = {
   list: () => get<AddressResponse[]>('/users/me/addresses'),
 
-  create: (body: {
-    fullName: string; phone: string; line1: string; line2?: string
-    city: string; stateProvince: string; postalCode: string; country: string
-  }) => post<AddressResponse>('/users/me/addresses', body),
+  create: (body: AddressBody) => post<AddressResponse>('/users/me/addresses', body),
+
+  update: (id: string, body: AddressBody) => put<AddressResponse>(`/users/me/addresses/${id}`, body),
+
+  delete: (id: string) => del<void>(`/users/me/addresses/${id}`),
 }
 
 // ─── User API ─────────────────────────────────────────────────────────────────
 
 export const userApi = {
   me: () => get<UserResponse>('/users/me'),
+
+  updateMe: (body: {
+    firstName?: string; lastName?: string; phone?: string
+    avatarUrl?: string; heightCm?: number; weightKg?: number; gender?: string
+  }) => patch<UserResponse>('/users/me', body),
+
+  changePassword: (currentPassword: string, newPassword: string) =>
+    post<void>('/users/me/change-password', { currentPassword, newPassword }),
 }
 
 // ─── Banner API ───────────────────────────────────────────────────────────────
@@ -460,7 +501,64 @@ export const bannerApi = {
   delete: (id: string) => del<void>(`/banners/admin/${id}`),
 }
 
-// ─── Admin Dashboard API ──────────────────────────────────────────────────────
+// ─── Brands API ───────────────────────────────────────────────────────────────
+
+export interface BrandResponse {
+  id: string
+  name: string
+  slug: string
+  description: string | null
+  logoUrl: string | null
+  active: boolean
+}
+
+export const brandsApi = {
+  list: () => get<BrandResponse[]>('/brands', false),
+}
+
+// ─── Wishlist API ─────────────────────────────────────────────────────────────
+
+export interface WishlistEntry {
+  id: string
+  productId: string
+  productName: string
+  slug: string
+  imageUrl: string | null
+  price: number
+  averageRating: number
+}
+
+export const wishlistApi = {
+  list: () => get<WishlistEntry[]>('/wishlist'),
+  add: (productId: string) => post<WishlistEntry>(`/wishlist/${productId}`),
+  remove: (productId: string) => del<void>(`/wishlist/${productId}`),
+  check: (productId: string) => get<boolean>(`/wishlist/${productId}/check`),
+}
+
+// ─── Notifications API ────────────────────────────────────────────────────────
+
+export interface NotificationResponse {
+  id: string
+  type: 'ORDER' | 'PROMOTION' | 'BACK_IN_STOCK' | 'PRICE_DROP' | 'SYSTEM'
+  title: string
+  body: string
+  payload: string | null
+  isRead: boolean
+  readAt: string | null
+  channel: string
+  createdAt: string
+}
+
+export const notificationsApi = {
+  list: (page = 0, size = 20) =>
+    get<PageResponse<NotificationResponse>>(`/notifications?page=${page}&size=${size}`),
+  unreadCount: () => get<number>('/notifications/unread-count'),
+  markRead: (id: string) => post<void>(`/notifications/${id}/read`),
+  markAllRead: () => post<void>('/notifications/read-all'),
+  delete: (id: string) => del<void>(`/notifications/${id}`),
+}
+
+
 
 export interface DashboardSummary {
   totalRevenue: number

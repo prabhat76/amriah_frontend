@@ -23,9 +23,9 @@ export default function CheckoutPage() {
   const setA = (k: keyof typeof address) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setAddress(p => ({ ...p, [k]: e.target.value }))
 
-  const shipping = subtotal > 150 ? 0 : 12
-  const total = subtotal + shipping
-  const tax = total * 0.1
+  const shipping = subtotal >= 100 ? 0 : 9.99
+  const tax = subtotal * 0.08   // 8% per API docs
+  const total = subtotal + shipping + tax
 
   const handleAddressSubmit = (e: FormEvent) => {
     e.preventDefault()
@@ -43,24 +43,55 @@ export default function CheckoutPage() {
         line1: address.line1,
         line2: address.line2 || undefined,
         city: address.city,
-        stateProvince: address.stateProvince,
+        stateProvince: address.stateProvince || undefined,
         postalCode: address.postalCode,
         country: address.country,
       })
 
-      // 2. Sync local cart items to server cart (backend requires server-side cart for checkout)
-      await cartApi.clear().catch(() => {}) // clear stale server cart first
-      for (const item of items) {
-        // For local items without a real variant ID, use productId as fallback
-        const variantId = item.variantId.endsWith('-default') ? item.productId : item.variantId
-        await cartApi.addItem(variantId, item.qty).catch(() => {})
+      // 2. Sync local cart items to server cart
+      // Only items with a real UUID variantId can be synced — local/demo product IDs are not valid
+      const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+      const syncableItems = items.filter(item => UUID_RE.test(item.variantId))
+
+      if (syncableItems.length === 0) {
+        throw new ApiError(400, 'INVALID_CART',
+          'Your cart contains demo items that cannot be ordered. Please browse the shop, add real products to your cart, and try again.')
+      }
+
+      let cartSynced = false
+      try {
+        await cartApi.clear().catch(() => {})
+        let syncedCount = 0
+        for (const item of syncableItems) {
+          try {
+            await cartApi.addItem(item.variantId, item.qty)
+            syncedCount++
+          } catch {
+            // Individual item unavailable — skip it
+          }
+        }
+        cartSynced = syncedCount > 0
+      } catch {
+        // Cart sync entirely unavailable — attempt checkout anyway
+      }
+
+      if (!cartSynced) {
+        throw new ApiError(400, 'CART_SYNC_FAILED',
+          'Could not add items to your cart. The selected variants may be out of stock. Please go back to the shop and re-add your items.')
       }
 
       // 3. Place order
       const order = await ordersApi.checkout({
         shippingAddressId: addr.id,
-        paymentMethod: payment.method,
+        paymentMethod: payment.method as 'STRIPE' | 'PAYPAL' | 'COD',
       })
+
+      // 4. Handle payment token per API spec
+      const pt = order.paymentToken
+      if (payment.method === 'STRIPE' && pt && !pt.startsWith('SIMULATED_')) {
+        // Real Stripe flow — frontend would call stripe.confirmPayment({ clientSecret: pt })
+      }
+
       clearCart()
       setOrderNumber(order.orderNumber)
     } catch (e) {
@@ -235,7 +266,7 @@ export default function CheckoutPage() {
 
                 <button type="submit" disabled={loading} className="btn-gold w-full gap-2">
                   {loading && <Loader2 size={15} className="animate-spin" />}
-                  {loading ? 'Placing order…' : `Place Order · $${(total + tax).toFixed(2)}`}
+                  {loading ? 'Placing order…' : `Place Order · $${total.toFixed(2)}`}
                 </button>
                 <p className="text-[10px] text-stone text-center">
                   By placing your order you agree to ASTRIMI's Terms of Service and Privacy Policy.
@@ -278,16 +309,16 @@ export default function CheckoutPage() {
                 <span>{shipping === 0 ? <span className="text-gold">Free</span> : `$${shipping.toFixed(2)}`}</span>
               </div>
               <div className="flex justify-between text-stone">
-                <span>Tax (est.)</span><span>${tax.toFixed(2)}</span>
+                <span>Tax (8%)</span><span>${tax.toFixed(2)}</span>
               </div>
             </div>
             <div className="divider mb-4" />
             <div className="flex justify-between font-medium text-navy">
-              <span>Total</span><span>${(total + tax).toFixed(2)}</span>
+              <span>Total</span><span>${total.toFixed(2)}</span>
             </div>
             {shipping > 0 && (
               <p className="text-[10px] text-stone mt-3">
-                Free shipping on orders over $150
+                Free shipping on orders over $100
               </p>
             )}
           </div>

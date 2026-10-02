@@ -1,9 +1,9 @@
-import 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight, Sparkles, ChevronRight } from 'lucide-react'
+import { ArrowRight, Sparkles, ChevronRight, Loader2 } from 'lucide-react'
 import { products as localProducts } from '@/data/products'
 import ProductCard from '@/components/ProductCard'
-import { ProductSummary } from '@/lib/api'
+import { productsApi, ProductSummary } from '@/lib/api'
 
 const TEXTILE_IMAGE = 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=800&q=80'
 const SARI_IMAGE = 'https://images.unsplash.com/photo-1585487000160-6ebcfceb0d03?w=800&q=80'
@@ -32,7 +32,18 @@ function toSummary(p: typeof localProducts[0]): ProductSummary {
 }
 
 export default function HomePage() {
-  const featured = localProducts.slice(0, 8).map(toSummary)
+  const [featured, setFeatured] = useState<ProductSummary[]>([])
+  const [loadingFeatured, setLoadingFeatured] = useState(true)
+
+  useEffect(() => {
+    productsApi.featured(0, 8)
+      .then(res => setFeatured(res.content))
+      .catch(() => {
+        // Fall back to local data if backend is unreachable
+        setFeatured(localProducts.slice(0, 8).map(toSummary))
+      })
+      .finally(() => setLoadingFeatured(false))
+  }, [])
 
   return (
     <main className="bg-pearl">
@@ -87,7 +98,11 @@ export default function HomePage() {
             </Link>
           </div>
 
-          {featured.length > 0 ? (
+          {loadingFeatured ? (
+            <div className="py-20 flex justify-center">
+              <Loader2 size={24} className="animate-spin text-gold/40" />
+            </div>
+          ) : featured.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5 gap-y-10">
               {featured.map(p => <ProductCard key={p.id} product={p} />)}
             </div>
