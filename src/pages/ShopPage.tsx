@@ -57,7 +57,7 @@ export default function ShopPage() {
     setError(null)
     try {
       // /products/search is broken on this backend — use /products list with client-side filtering
-      const res = await productsApi.list(0, 200)
+      const res = await productsApi.list(0, 100)
       let filtered = res.content
 
       // Category filter: match by categoryId (API data) or categoryName (local fallback)
