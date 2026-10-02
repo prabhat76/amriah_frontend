@@ -80,6 +80,12 @@ export default function CheckoutPage() {
           'Could not add items to your cart. The selected variants may be out of stock. Please go back to the shop and re-add your items.')
       }
 
+      // 3. Place order
+      const order = await ordersApi.checkout({
+        shippingAddressId: addr.id,
+        paymentMethod: payment.method as 'STRIPE' | 'PAYPAL' | 'COD',
+      })
+
       // 4. Handle payment token per API spec
       const pt = order.paymentToken
       if (payment.method === 'STRIPE' && pt && !pt.startsWith('SIMULATED_')) {
