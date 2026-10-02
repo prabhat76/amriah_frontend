@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { ChevronDown, ChevronUp, Loader2, SlidersHorizontal, X } from 'lucide-react'
 import { productsApi, categoriesApi, ProductSummary, CategoryResponse } from '@/lib/api'
-import { products as localProducts, categories as localCategories } from '@/data/products'
 import ProductCard from '@/components/ProductCard'
 
 const SORT_OPTIONS = [
@@ -48,17 +47,8 @@ export default function ShopPage() {
     categoriesApi.list()
       .then(setCategories)
       .catch(() => {
-        // Fall back to local categories if backend is unavailable
-        setCategories(localCategories.map((c, i) => ({
-          id: String(c.id),
-          name: c.name,
-          slug: c.name.toLowerCase().replace(/\s+/g, '-'),
-          description: null,
-          imageUrl: c.image,
-          parentId: null,
-          displayOrder: i,
-          active: true,
-        })))
+        // Categories unavailable — filters will be hidden, products still load
+        setCategories([])
       })
   }, [])
 
@@ -109,48 +99,11 @@ export default function ShopPage() {
       setProducts(sliced)
       setTotalElements(total)
       setTotalPages(totalPgs)
-    } catch {
-      // Backend unavailable — filter local products instead
-      const catId = (name: string) => {
-        const match = localCategories.find(c => c.name === name)
-        return match ? String(match.id) : ''
-      }
-      let filtered = localProducts.map(p => ({
-        id: String(p.id),
-        name: p.name,
-        slug: p.name.toLowerCase().replace(/\s+/g, '-'),
-        sku: `ASTRIMI-${p.id}`,
-        shortDescription: p.description,
-        mainImageUrl: p.image,
-        price: p.price,
-        compareAtPrice: p.originalPrice ?? null,
-        averageRating: p.rating,
-        reviewCount: p.reviewCount,
-        featured: true,
-        newArrival: p.badge === 'new',
-        // Use real category ID from local categories list
-        categoryId: catId(p.category),
-        categoryName: p.category,
-        brandId: null,
-        brandName: 'ASTRIMI',
-        minVariantPrice: p.price,
-      } as ProductSummary))
-
-      if (selectedCategory) {
-        filtered = filtered.filter(p => p.categoryId === selectedCategory)
-      }
-      if (search.trim()) {
-        const q = search.trim().toLowerCase()
-        filtered = filtered.filter(p => p.name.toLowerCase().includes(q))
-      }
-      if (maxPrice < 1000) {
-        filtered = filtered.filter(p => p.price <= maxPrice)
-      }
-
-      setProducts(filtered)
-      setTotalElements(filtered.length)
-      setTotalPages(1)
-      setError(null)
+    } catch (err) {
+      setError('Unable to load products. Please check your connection and try again.')
+      setProducts([])
+      setTotalElements(0)
+      setTotalPages(0)
     } finally {
       setLoading(false)
     }
