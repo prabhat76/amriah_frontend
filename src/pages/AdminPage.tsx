@@ -67,7 +67,10 @@ function OverviewTab() {
   if (error) return <AdminError msg={error} />
   if (!summary) return null
 
-  const fmt = (n: number) => n >= 1000 ? `₹${(n / 1000).toFixed(1)}k` : `₹${n}`
+  const fmt = (n: number | undefined | null) => {
+    if (n == null || isNaN(n)) return '—'
+    return n >= 1000 ? `₹${(n / 1000).toFixed(1)}k` : `₹${n.toFixed(0)}`
+  }
 
   return (
     <div className="space-y-6">
@@ -78,15 +81,15 @@ function OverviewTab() {
         </button>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-        <StatCard label="Total Revenue" value={fmt(summary.totalRevenue)} icon={TrendingUp} sub="All time" />
-        <StatCard label="Today's Revenue" value={fmt(summary.revenueToday)} icon={TrendingUp} sub="Since midnight" />
-        <StatCard label="Total Orders" value={summary.ordersTotal} icon={ShoppingBag} sub={`${summary.ordersPending} pending`} />
-        <StatCard label="Customers" value={summary.totalCustomers} icon={Users} sub={`+${summary.newCustomersToday} today`} />
-        <StatCard label="Low Stock" value={summary.lowStockProducts} icon={AlertTriangle} sub={`of ${summary.totalProducts} products`} />
+        <StatCard label="Total Revenue" value={fmt(summary.totalRevenue as number)} icon={TrendingUp} sub="All time" />
+        <StatCard label="Today's Revenue" value={fmt(summary.revenueToday as number)} icon={TrendingUp} sub="Since midnight" />
+        <StatCard label="Total Orders" value={summary.ordersTotal ?? '—'} icon={ShoppingBag} sub={`${summary.ordersPending ?? 0} pending`} />
+        <StatCard label="Customers" value={summary.totalCustomers ?? '—'} icon={Users} sub={`+${summary.newCustomersToday ?? 0} today`} />
+        <StatCard label="Low Stock" value={summary.lowStockProducts ?? '—'} icon={AlertTriangle} sub={`of ${summary.totalProducts ?? 0} products`} />
       </div>
       <div className="bg-white border border-stone/20 p-5 rounded-sm">
         <p className="text-xs uppercase tracking-widest text-stone/60 mb-1">Avg. Order Value (30d)</p>
-        <p className="text-3xl font-semibold text-navy">{fmt(summary.averageOrderValue)}</p>
+        <p className="text-3xl font-semibold text-navy">{fmt(summary.averageOrderValue as number)}</p>
       </div>
     </div>
   )
