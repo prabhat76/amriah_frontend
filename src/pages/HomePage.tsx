@@ -1,35 +1,11 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight, Sparkles, ChevronRight, Loader2 } from 'lucide-react'
-import { products as localProducts } from '@/data/products'
 import ProductCard from '@/components/ProductCard'
 import { productsApi, ProductSummary } from '@/lib/api'
 
 const TEXTILE_IMAGE = 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=800&q=80'
 const SARI_IMAGE = 'https://images.unsplash.com/photo-1585487000160-6ebcfceb0d03?w=800&q=80'
-
-// Convert local Product to ProductSummary shape for ProductCard
-function toSummary(p: typeof localProducts[0]): ProductSummary {
-  return {
-    id: String(p.id),
-    name: p.name,
-    slug: p.name.toLowerCase().replace(/\s+/g, '-'),
-    sku: `ASTRIMI-${p.id}`,
-    shortDescription: p.description,
-    mainImageUrl: p.image,
-    price: p.price,
-    compareAtPrice: p.originalPrice ?? null,
-    averageRating: p.rating,
-    reviewCount: p.reviewCount,
-    featured: true,
-    newArrival: p.badge === 'new',
-    categoryId: String(p.id),
-    categoryName: p.category,
-    brandId: null,
-    brandName: 'ASTRIMI',
-    minVariantPrice: p.price,
-  }
-}
 
 export default function HomePage() {
   const [featured, setFeatured] = useState<ProductSummary[]>([])
@@ -39,8 +15,8 @@ export default function HomePage() {
     productsApi.featured(0, 8)
       .then(res => setFeatured(res.content))
       .catch(() => {
-        // Fall back to local data if backend is unreachable
-        setFeatured(localProducts.slice(0, 8).map(toSummary))
+        // API unreachable — featured section stays empty; hero + brand sections still render
+        setFeatured([])
       })
       .finally(() => setLoadingFeatured(false))
   }, [])

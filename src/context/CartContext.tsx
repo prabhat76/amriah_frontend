@@ -32,11 +32,15 @@ interface CartContextType {
 }
 
 const CART_KEY = 'astrimi_cart'
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 function loadCart(): CartItem[] {
   try {
     const stored = localStorage.getItem(CART_KEY)
-    return stored ? JSON.parse(stored) : []
+    if (!stored) return []
+    const parsed: CartItem[] = JSON.parse(stored)
+    // Strip any demo/local items (non-UUID variantIds) so they never reach checkout
+    return parsed.filter(item => UUID_RE.test(item.variantId))
   } catch { return [] }
 }
 
