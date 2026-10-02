@@ -229,7 +229,18 @@ export default function CheckoutPage() {
                 </div>
 
                 {error && (
-                  <div className="bg-red-50 border border-red-200 text-red-600 text-xs p-4">{error}</div>
+                  <div className="bg-red-50 border border-red-200 text-red-600 text-xs p-4 space-y-2">
+                    <p>{error}</p>
+                    {error.includes('demo') && (
+                      <button
+                        type="button"
+                        onClick={() => { clearCart(); setError(null) }}
+                        className="underline font-medium hover:text-red-800"
+                      >
+                        Clear cart and start fresh →
+                      </button>
+                    )}
+                  </div>
                 )}
 
                 {/* Delivery summary */}
