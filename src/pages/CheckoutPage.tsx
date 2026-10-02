@@ -7,6 +7,71 @@ import { addressApi, cartApi, ordersApi, ApiError } from '@/lib/api'
 type Step = 'address' | 'payment'
 const PLACEHOLDER = 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=100&q=70'
 
+// ─── Per-country postal code rules ──────────────────────────────────────────
+const POSTAL_RULES: Record<string, { pattern: RegExp; example: string; label: string }> = {
+  GB: { pattern: /^[A-Z]{1,2}\d[A-Z\d]?\s?\d[A-Z]{2}$/i, example: 'EC1A 1BB', label: 'Postcode' },
+  US: { pattern: /^\d{5}(-\d{4})?$/, example: '10001', label: 'ZIP Code' },
+  IN: { pattern: /^\d{6}$/, example: '110001', label: 'PIN Code' },
+  CA: { pattern: /^[A-Z]\d[A-Z]\s?\d[A-Z]\d$/i, example: 'M5V 3A8', label: 'Postal Code' },
+  AU: { pattern: /^\d{4}$/, example: '2000', label: 'Postcode' },
+  DE: { pattern: /^\d{5}$/, example: '10115', label: 'PLZ' },
+  FR: { pattern: /^\d{5}$/, example: '75001', label: 'Code postal' },
+  AE: { pattern: /^\d{5}$/, example: '00000', label: 'Postal Code' },
+  SG: { pattern: /^\d{6}$/, example: '018956', label: 'Postal Code' },
+}
+
+const DEFAULT_POSTAL_RULE = { pattern: /^.{2,10}$/, example: '', label: 'Postal Code' }
+
+function getPostalRule(country: string) {
+  return POSTAL_RULES[country] ?? DEFAULT_POSTAL_RULE
+}
+
+// ─── Field-level validators ──────────────────────────────────────────────────
+function validateField(field: string, value: string, country: string): string {
+  switch (field) {
+    case 'fullName': {
+      if (!value.trim()) return 'Full name is required.'
+      if (value.trim().length < 2) return 'Name must be at least 2 characters.'
+      if (!/^[\p{L}\s''\-\.]+$/u.test(value.trim())) return 'Name contains invalid characters.'
+      if (!value.trim().includes(' ')) return 'Please enter both first and last name.'
+      return ''
+    }
+    case 'phone': {
+      if (!value.trim()) return 'Phone number is required.'
+      // Strip spaces, dashes, brackets for digit count check
+      const digits = value.replace(/[\s\-().+]/g, '')
+      if (!/^\+?[\d\s\-().]+$/.test(value)) return 'Enter a valid phone number.'
+      if (digits.length < 7 || digits.length > 15) return 'Phone number must be 7–15 digits.'
+      return ''
+    }
+    case 'line1': {
+      if (!value.trim()) return 'Address line 1 is required.'
+      if (value.trim().length < 5) return 'Please enter a complete street address.'
+      if (!/\d/.test(value)) return 'Include a house/flat number.'
+      return ''
+    }
+    case 'city': {
+      if (!value.trim()) return 'City is required.'
+      if (value.trim().length < 2) return 'Enter a valid city name.'
+      if (!/^[\p{L}\s''\-\.]+$/u.test(value.trim())) return 'City name contains invalid characters.'
+      return ''
+    }
+    case 'postalCode': {
+      if (!value.trim()) return `${getPostalRule(country).label} is required.`
+      if (!getPostalRule(country).pattern.test(value.trim())) {
+        const ex = getPostalRule(country).example
+        return `Invalid ${getPostalRule(country).label}.${ex ? ` Example: ${ex}` : ''}`
+      }
+      return ''
+    }
+    default:
+      return ''
+  }
+}
+
+type AddressKey = 'fullName' | 'phone' | 'line1' | 'line2' | 'city' | 'stateProvince' | 'postalCode' | 'country'
+const VALIDATED_FIELDS: AddressKey[] = ['fullName', 'phone', 'line1', 'city', 'postalCode']
+
 export default function CheckoutPage() {
   const { items, subtotal, clearCart } = useCart()
   const [step, setStep] = useState<Step>('address')
@@ -18,17 +83,37 @@ export default function CheckoutPage() {
     fullName: '', phone: '', line1: '', line2: '',
     city: '', stateProvince: '', postalCode: '', country: 'GB',
   })
+  const [touched, setTouched] = useState<Partial<Record<AddressKey, boolean>>>({})
   const [payment, setPayment] = useState({ method: 'COD' })
 
-  const setA = (k: keyof typeof address) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
-    setAddress(p => ({ ...p, [k]: e.target.value }))
+  // Compute inline errors only for touched fields
+  const fieldError = (k: AddressKey) =>
+    touched[k] ? validateField(k, address[k], address.country) : ''
+
+  const setA = (k: AddressKey) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const val = e.target.value
+    setAddress(p => ({ ...p, [k]: val }))
+    // If country changes, re-validate postalCode immediately if already touched
+    if (k === 'country') {
+      setTouched(t => ({ ...t, postalCode: t.postalCode ?? false }))
+    }
+  }
+
+  const onBlur = (k: AddressKey) => () => setTouched(t => ({ ...t, [k]: true }))
 
   const shipping = subtotal >= 100 ? 0 : 9.99
-  const tax = subtotal * 0.08   // 8% per API docs
+  const tax = subtotal * 0.08
   const total = subtotal + shipping + tax
 
   const handleAddressSubmit = (e: FormEvent) => {
     e.preventDefault()
+    // Touch all validated fields to show any hidden errors
+    const allTouched = VALIDATED_FIELDS.reduce((acc, k) => ({ ...acc, [k]: true }), {} as Record<AddressKey, boolean>)
+    setTouched(allTouched)
+
+    const hasErrors = VALIDATED_FIELDS.some(k => validateField(k, address[k], address.country) !== '')
+    if (hasErrors) return
+
     setStep('payment')
   }
 
@@ -36,7 +121,6 @@ export default function CheckoutPage() {
     e.preventDefault()
     setLoading(true); setError(null)
     try {
-      // 1. Create/update address
       const addr = await addressApi.create({
         fullName: address.fullName,
         phone: address.phone,
@@ -48,8 +132,6 @@ export default function CheckoutPage() {
         country: address.country,
       })
 
-      // 2. Sync local cart items to server cart
-      // Only items with a real UUID variantId can be synced — local/demo product IDs are not valid
       const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
       const syncableItems = items.filter(item => UUID_RE.test(item.variantId))
 
@@ -86,10 +168,9 @@ export default function CheckoutPage() {
         paymentMethod: payment.method as 'STRIPE' | 'PAYPAL' | 'COD',
       })
 
-      // 4. Handle payment token per API spec
       const pt = order.paymentToken
       if (payment.method === 'STRIPE' && pt && !pt.startsWith('SIMULATED_')) {
-        // Real Stripe flow — frontend would call stripe.confirmPayment({ clientSecret: pt })
+        // Real Stripe flow — stripe.confirmPayment({ clientSecret: pt })
       }
 
       clearCart()
@@ -128,6 +209,9 @@ export default function CheckoutPage() {
     )
   }
 
+  const postalLabel = getPostalRule(address.country).label
+  const postalPlaceholder = getPostalRule(address.country).example
+
   return (
     <main className="bg-pearl min-h-screen">
       {/* Header */}
@@ -160,23 +244,48 @@ export default function CheckoutPage() {
           <div>
             {/* Address step */}
             {step === 'address' && (
-              <form onSubmit={handleAddressSubmit} className="space-y-6">
+              <form onSubmit={handleAddressSubmit} noValidate className="space-y-6">
                 <div>
                   <p className="eyebrow mb-2">01</p>
                   <h2 className="display-md text-navy mb-6">Delivery Address</h2>
                 </div>
                 <div className="grid sm:grid-cols-2 gap-5">
+
+                  {/* Full Name */}
                   <div className="sm:col-span-2">
                     <label className="caption mb-2 block uppercase tracking-widest">Full Name *</label>
-                    <input type="text" value={address.fullName} onChange={setA('fullName')} required className="field" placeholder="Jane Doe" />
+                    <input
+                      type="text" value={address.fullName}
+                      onChange={setA('fullName')} onBlur={onBlur('fullName')}
+                      className={`field ${fieldError('fullName') ? 'border-red-400 focus:border-red-400' : ''}`}
+                      placeholder="Jane Doe"
+                    />
+                    {fieldError('fullName') && (
+                      <p className="mt-1.5 text-[11px] text-red-500">{fieldError('fullName')}</p>
+                    )}
                   </div>
+
+                  {/* Phone */}
                   <div>
                     <label className="caption mb-2 block uppercase tracking-widest">Phone *</label>
-                    <input type="tel" value={address.phone} onChange={setA('phone')} required className="field" placeholder="+44 000 000 0000" />
+                    <input
+                      type="tel" value={address.phone}
+                      onChange={setA('phone')} onBlur={onBlur('phone')}
+                      className={`field ${fieldError('phone') ? 'border-red-400 focus:border-red-400' : ''}`}
+                      placeholder="+44 7700 000000"
+                    />
+                    {fieldError('phone') && (
+                      <p className="mt-1.5 text-[11px] text-red-500">{fieldError('phone')}</p>
+                    )}
                   </div>
+
+                  {/* Country */}
                   <div>
                     <label className="caption mb-2 block uppercase tracking-widest">Country *</label>
-                    <select value={address.country} onChange={setA('country')} required className="field">
+                    <select
+                      value={address.country} onChange={setA('country')}
+                      onBlur={onBlur('country')} required className="field"
+                    >
                       <option value="GB">United Kingdom</option>
                       <option value="IN">India</option>
                       <option value="US">United States</option>
@@ -188,26 +297,67 @@ export default function CheckoutPage() {
                       <option value="FR">France</option>
                     </select>
                   </div>
+
+                  {/* Address Line 1 */}
                   <div className="sm:col-span-2">
                     <label className="caption mb-2 block uppercase tracking-widest">Address Line 1 *</label>
-                    <input type="text" value={address.line1} onChange={setA('line1')} required className="field" placeholder="House / flat / building" />
+                    <input
+                      type="text" value={address.line1}
+                      onChange={setA('line1')} onBlur={onBlur('line1')}
+                      className={`field ${fieldError('line1') ? 'border-red-400 focus:border-red-400' : ''}`}
+                      placeholder="12 Savile Row"
+                    />
+                    {fieldError('line1') && (
+                      <p className="mt-1.5 text-[11px] text-red-500">{fieldError('line1')}</p>
+                    )}
                   </div>
+
+                  {/* Address Line 2 */}
                   <div className="sm:col-span-2">
                     <label className="caption mb-2 block uppercase tracking-widest">Address Line 2</label>
-                    <input type="text" value={address.line2} onChange={setA('line2')} className="field" placeholder="Street, area (optional)" />
+                    <input
+                      type="text" value={address.line2} onChange={setA('line2')}
+                      className="field" placeholder="Apartment, suite, floor (optional)"
+                    />
                   </div>
+
+                  {/* City */}
                   <div>
                     <label className="caption mb-2 block uppercase tracking-widest">City *</label>
-                    <input type="text" value={address.city} onChange={setA('city')} required className="field" placeholder="London" />
+                    <input
+                      type="text" value={address.city}
+                      onChange={setA('city')} onBlur={onBlur('city')}
+                      className={`field ${fieldError('city') ? 'border-red-400 focus:border-red-400' : ''}`}
+                      placeholder="London"
+                    />
+                    {fieldError('city') && (
+                      <p className="mt-1.5 text-[11px] text-red-500">{fieldError('city')}</p>
+                    )}
                   </div>
+
+                  {/* Postal code — label + placeholder update with country */}
                   <div>
-                    <label className="caption mb-2 block uppercase tracking-widest">Postcode *</label>
-                    <input type="text" value={address.postalCode} onChange={setA('postalCode')} required className="field" placeholder="EC1A 1BB" />
+                    <label className="caption mb-2 block uppercase tracking-widest">{postalLabel} *</label>
+                    <input
+                      type="text" value={address.postalCode}
+                      onChange={setA('postalCode')} onBlur={onBlur('postalCode')}
+                      className={`field ${fieldError('postalCode') ? 'border-red-400 focus:border-red-400' : ''}`}
+                      placeholder={postalPlaceholder}
+                    />
+                    {fieldError('postalCode') && (
+                      <p className="mt-1.5 text-[11px] text-red-500">{fieldError('postalCode')}</p>
+                    )}
                   </div>
+
+                  {/* State / County */}
                   <div>
                     <label className="caption mb-2 block uppercase tracking-widest">State / County</label>
-                    <input type="text" value={address.stateProvince} onChange={setA('stateProvince')} className="field" placeholder="Optional" />
+                    <input
+                      type="text" value={address.stateProvince}
+                      onChange={setA('stateProvince')} className="field" placeholder="Optional"
+                    />
                   </div>
+
                 </div>
                 <button type="submit" className="btn-navy w-full gap-2">
                   Continue to Payment <ChevronRight size={14} />
@@ -248,6 +398,7 @@ export default function CheckoutPage() {
                   <p className="eyebrow mb-2 text-[9px]">Delivering to</p>
                   <p className="text-sm font-medium text-navy">{address.fullName}</p>
                   <p className="text-xs text-stone">{address.line1}{address.line2 ? `, ${address.line2}` : ''}, {address.city}, {address.postalCode}</p>
+                  <p className="text-xs text-stone">{address.phone}</p>
                 </div>
 
                 {/* Payment method */}
