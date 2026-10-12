@@ -855,10 +855,14 @@ function ProductsTab() {
     loadDetail(productId)
   }
 
-  const handleImageUpload = async (productId: string, file: File) => {
+  const handleImageUpload = async (productId: string, files: FileList) => {
     setUploadingId(productId)
     try {
-      await adminProductsApi.uploadImage(productId, file, false)
+      if (files.length === 1) {
+        await adminProductsApi.uploadImage(productId, files[0], false)
+      } else {
+        await adminProductsApi.bulkUploadImages(productId, Array.from(files), false)
+      }
       load()
     } catch (e) { alert(e instanceof ApiError ? e.message : 'Upload failed') }
     finally { setUploadingId(null) }
@@ -938,9 +942,9 @@ function ProductsTab() {
                       title="View variants">
                       <Tag size={13} />
                     </button>
-                    <input type="file" accept="image/*" className="hidden"
+                    <input type="file" accept="image/*" multiple className="hidden"
                       ref={el => { fileInputs.current[p.id] = el }}
-                      onChange={e => { const f = e.target.files?.[0]; if (f) handleImageUpload(p.id, f) }} />
+                      onChange={e => { if (e.target.files?.length) handleImageUpload(p.id, e.target.files) }} />
                     <button onClick={() => fileInputs.current[p.id]?.click()} disabled={uploadingId === p.id}
                       className="p-1.5 text-stone/60 hover:text-navy border border-stone/20 hover:border-navy transition-colors disabled:opacity-40"
                       title="Upload image">
