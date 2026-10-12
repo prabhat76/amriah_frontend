@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
 import { Navigate, Link } from 'react-router-dom'
+import * as XLSX from 'xlsx'
 import {
   LayoutDashboard, Image, ShoppingBag, Package, TrendingUp,
   Users, AlertTriangle, Plus, Pencil, Trash2, Upload, X,
   ChevronDown, Loader2, Eye, EyeOff, RefreshCw, Tag,
-  ChevronLeft, ChevronRight as ChevronRightIcon, Save, PlusCircle,
+  ChevronLeft, ChevronRight as ChevronRightIcon, Save, PlusCircle, FileSpreadsheet,
 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import {
@@ -579,6 +580,198 @@ function OrdersTab() {
   )
 }
 
+// ─── Bulk Excel Upload ───────────────────────────────────────────────────────
+
+function BulkUploadModal({ categories, onDone, onCancel }: {
+  categories: CategoryResponse[]
+  onDone: () => void
+  onCancel: () => void
+}) {
+  const fileRef = useRef<HTMLInputElement>(null)
+  const [rows, setRows] = useState<ProductCreateBody[]>([])
+  const [errors, setErrors] = useState<string[]>([])
+  const [submitting, setSubmitting] = useState(false)
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null)
+  const [fileName, setFileName] = useState('')
+
+  const REQUIRED = ['name', 'sku', 'price', 'categoryName']
+
+  const parseFile = (file: File) => {
+    setFileName(file.name)
+    setErrors([])
+    setRows([])
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      try {
+        const wb = XLSX.read(e.target?.result, { type: 'binary' })
+        const ws = wb.Sheets[wb.SheetNames[0]]
+        const data = XLSX.utils.sheet_to_json<Record<string, string>>(ws, { defval: '' })
+        const errs: string[] = []
+        const parsed: ProductCreateBody[] = []
+
+        data.forEach((row, i) => {
+          const rowNum = i + 2
+          const missing = REQUIRED.filter(k => !row[k]?.toString().trim())
+          if (missing.length) { errs.push(`Row ${rowNum}: missing ${missing.join(', ')}`); return }
+
+          const cat = categories.find(c =>
+            c.name.toLowerCase() === row.categoryName?.toString().trim().toLowerCase()
+          )
+          if (!cat) { errs.push(`Row ${rowNum}: unknown category "${row.categoryName}"`); return }
+
+          const price = parseFloat(row.price)
+          if (isNaN(price)) { errs.push(`Row ${rowNum}: invalid price "${row.price}"`); return }
+
+          parsed.push({
+            name: row.name.trim(),
+            sku: row.sku.trim(),
+            categoryId: cat.id,
+            price,
+            compareAtPrice: row.compareAtPrice ? parseFloat(row.compareAtPrice) || undefined : undefined,
+            shortDescription: row.shortDescription?.trim() || undefined,
+            description: row.description?.trim() || undefined,
+            mainImageUrl: row.mainImageUrl?.trim() || undefined,
+            tags: row.tags ? row.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : [],
+            featured: row.featured?.toString().toLowerCase() === 'true',
+            newArrival: row.newArrival?.toString().toLowerCase() === 'true',
+          })
+        })
+
+        setErrors(errs)
+        setRows(parsed)
+      } catch {
+        setErrors(['Failed to parse file. Make sure it is a valid .xlsx or .csv file.'])
+      }
+    }
+    reader.readAsBinaryString(file)
+  }
+
+  const handleSubmit = async () => {
+    if (!rows.length) return
+    setSubmitting(true)
+    setProgress({ done: 0, total: rows.length })
+    const errs: string[] = []
+    for (let i = 0; i < rows.length; i++) {
+      try {
+        await adminProductsApi.create(rows[i])
+      } catch (e) {
+        errs.push(`Row ${i + 2} (${rows[i].name}): ${e instanceof ApiError ? e.message : 'Failed'}`)
+      }
+      setProgress({ done: i + 1, total: rows.length })
+    }
+    setSubmitting(false)
+    if (errs.length) { setErrors(errs); return }
+    onDone()
+  }
+
+  const downloadTemplate = () => {
+    const ws = XLSX.utils.aoa_to_sheet([
+      ['name','sku','categoryName','price','compareAtPrice','shortDescription','description','mainImageUrl','tags','featured','newArrival'],
+      ['Example Kurta','KRT-001', categories[0]?.name ?? 'Women','999','1299','Short desc','Long description','https://...','ethnic,kurta','false','true'],
+    ])
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Products')
+    XLSX.writeFile(wb, 'products_template.xlsx')
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <div className="bg-white rounded-sm w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-5 border-b border-stone/20 sticky top-0 bg-white z-10">
+          <h3 className="font-semibold text-navy flex items-center gap-2">
+            <FileSpreadsheet size={16} /> Bulk Upload from Excel
+          </h3>
+          <button onClick={onCancel}><X size={16} className="text-stone/60" /></button>
+        </div>
+
+        <div className="p-5 space-y-5">
+          {/* Step 1 */}
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-stone/50 mb-2">1. Download Template</p>
+            <button onClick={downloadTemplate}
+              className="flex items-center gap-2 text-xs border border-stone/30 px-3 py-2 hover:border-navy transition-colors">
+              <FileSpreadsheet size={13} /> Download .xlsx Template
+            </button>
+            <p className="text-[10px] text-stone/40 mt-1">Fill in the template and upload below. Category name must match exactly.</p>
+          </div>
+
+          {/* Step 2 */}
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-stone/50 mb-2">2. Upload Filled File</p>
+            <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden"
+              onChange={e => { const f = e.target.files?.[0]; if (f) parseFile(f) }} />
+            <button onClick={() => fileRef.current?.click()}
+              className="flex items-center gap-2 text-xs border border-stone/30 px-3 py-2 hover:border-navy transition-colors">
+              <Upload size={13} /> {fileName || 'Choose File'}
+            </button>
+          </div>
+
+          {/* Errors */}
+          {errors.length > 0 && (
+            <div className="bg-red-50 border border-red-200 rounded-sm p-3 space-y-1 max-h-40 overflow-y-auto">
+              {errors.map((e, i) => <p key={i} className="text-xs text-red-600">{e}</p>)}
+            </div>
+          )}
+
+          {/* Preview */}
+          {rows.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-stone/50 mb-2">
+                Preview — {rows.length} product{rows.length !== 1 ? 's' : ''} ready to import
+              </p>
+              <div className="border border-stone/20 rounded-sm overflow-hidden max-h-48 overflow-y-auto">
+                <table className="w-full text-xs">
+                  <thead className="bg-stone/5 sticky top-0">
+                    <tr>
+                      <th className="text-left px-3 py-2 text-stone/50">Name</th>
+                      <th className="text-left px-3 py-2 text-stone/50">SKU</th>
+                      <th className="text-left px-3 py-2 text-stone/50">Category</th>
+                      <th className="text-left px-3 py-2 text-stone/50">Price</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-stone/10">
+                    {rows.map((r, i) => (
+                      <tr key={i}>
+                        <td className="px-3 py-2 text-navy font-medium">{r.name}</td>
+                        <td className="px-3 py-2 font-mono text-stone/60">{r.sku}</td>
+                        <td className="px-3 py-2 text-stone/60">{categories.find(c => c.id === r.categoryId)?.name}</td>
+                        <td className="px-3 py-2 font-semibold">₹{r.price}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Progress */}
+          {progress && (
+            <div>
+              <div className="flex justify-between text-xs text-stone/60 mb-1">
+                <span>Importing…</span>
+                <span>{progress.done} / {progress.total}</span>
+              </div>
+              <div className="w-full bg-stone/10 h-1.5 rounded-full">
+                <div className="bg-gold h-1.5 rounded-full transition-all"
+                  style={{ width: `${(progress.done / progress.total) * 100}%` }} />
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-3 pt-2 border-t border-stone/20">
+            <button onClick={onCancel} className="px-4 py-2 text-sm border border-stone/30 hover:border-navy">Cancel</button>
+            <button onClick={handleSubmit} disabled={submitting || rows.length === 0}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm bg-navy text-white hover:bg-navy/90 disabled:opacity-50">
+              {submitting && <Loader2 size={14} className="animate-spin" />}
+              Import {rows.length > 0 ? `${rows.length} Products` : 'Products'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Products Tab ─────────────────────────────────────────────────────────────
 
 function VariantForm({ productId, onSaved, onCancel }: { productId: string; onSaved: () => void; onCancel: () => void }) {
@@ -817,6 +1010,7 @@ function ProductsTab() {
   const [page, setPage] = useState(0)
   const [totalPages, setTotalPages] = useState(0)
   const [creating, setCreating] = useState(false)
+  const [bulkUploading, setBulkUploading] = useState(false)
   const [editing, setEditing] = useState<ProductDetail | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [uploadingId, setUploadingId] = useState<string | null>(null)
@@ -891,6 +1085,9 @@ function ProductsTab() {
       {creating && (
         <ProductForm categories={categories} onSaved={() => { setCreating(false); load() }} onCancel={() => setCreating(false)} />
       )}
+      {bulkUploading && (
+        <BulkUploadModal categories={categories} onDone={() => { setBulkUploading(false); load() }} onCancel={() => setBulkUploading(false)} />
+      )}
       {editing && (
         <ProductForm initial={editing} categories={categories} onSaved={() => { setEditing(null); load() }} onCancel={() => setEditing(null)} />
       )}
@@ -899,6 +1096,10 @@ function ProductsTab() {
         <h2 className="text-lg font-semibold text-navy">Products</h2>
         <div className="flex gap-2">
           <Link to="/shop" className="text-xs text-stone/60 hover:text-navy underline">View storefront →</Link>
+          <button onClick={() => setBulkUploading(true)}
+            className="flex items-center gap-1.5 text-sm border border-stone/30 text-stone/70 px-3 py-2 hover:border-navy hover:text-navy">
+            <FileSpreadsheet size={14} /> Bulk Upload
+          </button>
           <button onClick={() => setCreating(true)}
             className="flex items-center gap-1.5 text-sm bg-navy text-white px-3 py-2 hover:bg-navy/90">
             <Plus size={14} /> Add Product
