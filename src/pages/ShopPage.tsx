@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { ChevronDown, ChevronUp, Loader2, SlidersHorizontal, X } from 'lucide-react'
 import { productsApi, categoriesApi, ProductSummary, CategoryResponse } from '@/lib/api'
@@ -43,9 +43,6 @@ export default function ShopPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Use a ref to track if the initial fetch has been done
-  const fetchedRef = useRef(false)
-
   const fetchAll = () => {
     setLoading(true)
     setError(null)
@@ -64,11 +61,7 @@ export default function ShopPage() {
       .finally(() => setLoading(false))
   }
 
-  useEffect(() => {
-    if (fetchedRef.current) return
-    fetchedRef.current = true
-    fetchAll()
-  }, [])
+  useEffect(() => { fetchAll() }, [])
 
   // Client-side filtering + sorting + pagination — no extra API calls
   const { products, totalElements, totalPages } = useMemo(() => {
@@ -242,7 +235,7 @@ export default function ShopPage() {
             {error && (
               <div className="py-10 text-center">
                 <p className="text-sm text-red-400 mb-4">{error}</p>
-                <button onClick={() => { fetchedRef.current = false; fetchAll() }} className="btn-outline-gold btn-sm">Retry</button>
+                <button onClick={fetchAll} className="btn-outline-gold btn-sm">Retry</button>
               </div>
             )}
 

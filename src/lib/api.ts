@@ -687,6 +687,18 @@ export const adminProductsApi = {
       .then(r => r.json() as Promise<ApiResponse<unknown>>)
       .then(j => { if (!j.success) throw new ApiError(400, j.errorCode ?? 'ERROR', j.message); return j.data })
   },
+
+  bulkUploadImages: (productId: string, files: File[], setFirstAsMain = false) => {
+    const form = new FormData()
+    files.forEach(f => form.append('files', f))
+    form.append('setFirstAsMain', String(setFirstAsMain))
+    const t = token.get()
+    const headers: Record<string, string> = {}
+    if (t) headers['Authorization'] = `Bearer ${t}`
+    return fetch(`${BASE}/products/${productId}/images/bulk-upload`, { method: 'POST', headers, body: form })
+      .then(r => r.json() as Promise<ApiResponse<ProductDetail>>)
+      .then(j => { if (!j.success) throw new ApiError(400, j.errorCode ?? 'ERROR', j.message); return j.data })
+  },
 }
 
 // ─── Admin Categories API ─────────────────────────────────────────────────────
