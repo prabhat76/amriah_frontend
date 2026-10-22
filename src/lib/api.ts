@@ -139,6 +139,7 @@ export interface ProductSummary {
   brandId: string | null
   brandName: string | null
   minVariantPrice: number | null
+  imageUrls: string[]
 }
 
 export interface ProductVariant {
@@ -686,6 +687,17 @@ export const adminProductsApi = {
     return fetch(`${BASE}/products/${productId}/images/upload`, { method: 'POST', headers, body: form })
       .then(r => r.json() as Promise<ApiResponse<unknown>>)
       .then(j => { if (!j.success) throw new ApiError(400, j.errorCode ?? 'ERROR', j.message); return j.data })
+  },
+
+  uploadImageStandalone: (file: File): Promise<string> => {
+    const form = new FormData()
+    form.append('file', file)
+    const t = token.get()
+    const headers: Record<string, string> = {}
+    if (t) headers['Authorization'] = `Bearer ${t}`
+    return fetch(`${BASE}/products/images/upload`, { method: 'POST', headers, body: form })
+      .then(r => r.json() as Promise<ApiResponse<string>>)
+      .then(j => { if (!j.success) throw new ApiError(400, j.errorCode ?? 'ERROR', j.message); return j.data as string })
   },
 
   bulkUploadImages: (productId: string, files: File[], setFirstAsMain = false) => {

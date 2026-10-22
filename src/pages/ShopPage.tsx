@@ -258,7 +258,7 @@ export default function ShopPage() {
             ) : (
               <>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-5 gap-y-10">
-                  {products.map(p => <ProductCard key={p.id} product={p} />)}
+                  {products.map(p => <ProductCard key={p.id} product={p} images={p.imageUrls} />)}
                 </div>
                 {totalPages > 1 && (
                   <div className="flex justify-center gap-3 mt-14">
