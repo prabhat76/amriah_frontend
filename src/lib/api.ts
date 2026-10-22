@@ -689,6 +689,17 @@ export const adminProductsApi = {
       .then(j => { if (!j.success) throw new ApiError(400, j.errorCode ?? 'ERROR', j.message); return j.data })
   },
 
+  uploadImageStandalone: (file: File): Promise<string> => {
+    const form = new FormData()
+    form.append('file', file)
+    const t = token.get()
+    const headers: Record<string, string> = {}
+    if (t) headers['Authorization'] = `Bearer ${t}`
+    return fetch(`${BASE}/products/images/upload`, { method: 'POST', headers, body: form })
+      .then(r => r.json() as Promise<ApiResponse<string>>)
+      .then(j => { if (!j.success) throw new ApiError(400, j.errorCode ?? 'ERROR', j.message); return j.data as string })
+  },
+
   bulkUploadImages: (productId: string, files: File[], setFirstAsMain = false) => {
     const form = new FormData()
     files.forEach(f => form.append('files', f))

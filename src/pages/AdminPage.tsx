@@ -856,6 +856,26 @@ function ProductForm({
   const [tagInput, setTagInput] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [uploadingIdx, setUploadingIdx] = useState<number | null>(null)
+  const [uploadingMain, setUploadingMain] = useState(false)
+
+  const handleImageFileUpload = async (file: File, idx: number | 'main') => {
+    if (idx === 'main') setUploadingMain(true)
+    else setUploadingIdx(idx)
+    try {
+      const url = await adminProductsApi.uploadImageStandalone(file)
+      if (idx === 'main') {
+        setForm(p => ({ ...p, mainImageUrl: url }))
+      } else {
+        setForm(p => ({ ...p, imageUrls: (p.imageUrls ?? []).map((u, j) => j === idx ? url : u) }))
+      }
+    } catch (e: any) {
+      alert('Upload failed: ' + e.message)
+    } finally {
+      if (idx === 'main') setUploadingMain(false)
+      else setUploadingIdx(null)
+    }
+  }
 
   const set = (k: keyof ProductCreateBody) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
     setForm(p => ({
@@ -946,7 +966,13 @@ function ProductForm({
             </div>
             <div className="sm:col-span-2">
               <label className={LABEL}>Main Image URL</label>
-              <input type="url" value={form.mainImageUrl ?? ''} onChange={set('mainImageUrl')} className={FIELD} placeholder="https://..." />
+              <div className="flex gap-2">
+                <input type="url" value={form.mainImageUrl ?? ''} onChange={set('mainImageUrl')} className={`${FIELD} flex-1`} placeholder="https://... or upload →" />
+                <label className="flex items-center gap-1 px-3 py-2 border border-stone/20 text-xs text-stone/60 hover:text-navy hover:border-navy cursor-pointer transition-colors shrink-0">
+                  {uploadingMain ? <span className="animate-spin">⟳</span> : <Upload size={13} />}
+                  <input type="file" accept="image/*" className="hidden" onChange={e => e.target.files?.[0] && handleImageFileUpload(e.target.files[0], 'main')} />
+                </label>
+              </div>
             </div>
             <div className="sm:col-span-2">
               <label className={LABEL}>Additional Images <span className="normal-case font-normal text-stone/50">(slideshow on product card)</span></label>
@@ -958,8 +984,12 @@ function ProductForm({
                       value={url}
                       onChange={e => setForm(p => ({ ...p, imageUrls: (p.imageUrls ?? []).map((u, j) => j === i ? e.target.value : u) }))}
                       className={`${FIELD} flex-1`}
-                      placeholder="https://..."
+                      placeholder="https://... or upload →"
                     />
+                    <label className="flex items-center gap-1 px-3 py-2 border border-stone/20 text-xs text-stone/60 hover:text-navy hover:border-navy cursor-pointer transition-colors shrink-0">
+                      {uploadingIdx === i ? <span className="animate-spin">⟳</span> : <Upload size={13} />}
+                      <input type="file" accept="image/*" className="hidden" onChange={e => e.target.files?.[0] && handleImageFileUpload(e.target.files[0], i)} />
+                    </label>
                     <button type="button"
                       onClick={() => setForm(p => ({ ...p, imageUrls: (p.imageUrls ?? []).filter((_, j) => j !== i) }))}
                       className="px-2 text-stone/50 hover:text-red-500 border border-stone/20 hover:border-red-200">
