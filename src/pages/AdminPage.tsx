@@ -847,6 +847,7 @@ function ProductForm({
     price: initial?.product.price ?? 0,
     compareAtPrice: initial?.product.compareAtPrice ?? undefined,
     mainImageUrl: initial?.product.mainImageUrl ?? '',
+    imageUrls: initial?.imageUrls ?? [],
     tags: initial?.tags ?? [],
     featured: initial?.product.featured ?? false,
     newArrival: initial?.product.newArrival ?? false,
@@ -891,6 +892,7 @@ function ProductForm({
           price: body.price,
           compareAtPrice: body.compareAtPrice,
           mainImageUrl: body.mainImageUrl,
+          imageUrls: (body.imageUrls ?? []).filter(Boolean),
           tags: body.tags,
           featured: body.featured,
           newArrival: body.newArrival,
@@ -945,6 +947,32 @@ function ProductForm({
             <div className="sm:col-span-2">
               <label className={LABEL}>Main Image URL</label>
               <input type="url" value={form.mainImageUrl ?? ''} onChange={set('mainImageUrl')} className={FIELD} placeholder="https://..." />
+            </div>
+            <div className="sm:col-span-2">
+              <label className={LABEL}>Additional Images <span className="normal-case font-normal text-stone/50">(slideshow on product card)</span></label>
+              <div className="space-y-2">
+                {(form.imageUrls ?? []).map((url, i) => (
+                  <div key={i} className="flex gap-2">
+                    <input
+                      type="url"
+                      value={url}
+                      onChange={e => setForm(p => ({ ...p, imageUrls: (p.imageUrls ?? []).map((u, j) => j === i ? e.target.value : u) }))}
+                      className={`${FIELD} flex-1`}
+                      placeholder="https://..."
+                    />
+                    <button type="button"
+                      onClick={() => setForm(p => ({ ...p, imageUrls: (p.imageUrls ?? []).filter((_, j) => j !== i) }))}
+                      className="px-2 text-stone/50 hover:text-red-500 border border-stone/20 hover:border-red-200">
+                      <X size={13} />
+                    </button>
+                  </div>
+                ))}
+                <button type="button"
+                  onClick={() => setForm(p => ({ ...p, imageUrls: [...(p.imageUrls ?? []), ''] }))}
+                  className="flex items-center gap-1.5 text-xs text-stone/60 hover:text-navy border border-dashed border-stone/30 px-3 py-2 w-full justify-center hover:border-navy transition-colors">
+                  <Plus size={12} /> Add Image URL
+                </button>
+              </div>
             </div>
             <div className="sm:col-span-2">
               <label className={LABEL}>Short Description</label>

@@ -139,6 +139,7 @@ export interface ProductSummary {
   brandId: string | null
   brandName: string | null
   minVariantPrice: number | null
+  imageUrls: string[]
 }
 
 export interface ProductVariant {
